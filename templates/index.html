@@ -1,0 +1,1918 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小红书工具箱</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif; background: #f5f5f7; color: #1d1d1f; display: flex; height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar { width: 220px; background: #1d1d1f; color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+.sidebar .logo { padding: 20px 16px 12px; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
+.sidebar .cat-label { padding: 16px 16px 4px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
+.sidebar .nav-item { display: block; padding: 8px 16px; color: #ccc; text-decoration: none; font-size: 13px; cursor: pointer; border-left: 3px solid transparent; }
+.sidebar .nav-item:hover { background: #2d2d2f; color: #fff; }
+.sidebar .nav-item.active { background: #2d2d2f; color: #fff; border-left-color: #ff6b6b; }
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.toolbar { padding: 12px 24px; background: #fff; border-bottom: 1px solid #e8e8ed; display: flex; align-items: center; gap: 12px; }
+.toolbar .env-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; background: #555; }
+.toolbar .env-dot.ok { background: #30d158; }
+.toolbar .env-dot.fail { background: #ff453a; }
+.toolbar .env-dot.warn { background: #ff9f0a; }
+
+/* ── Modal ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; }
+.modal-overlay.show { display: flex; align-items: center; justify-content: center; }
+.modal { background: #fff; border-radius: 12px; width: 85vw; height: 85vh; max-width: 1200px; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+.modal-header { padding: 16px 20px; border-bottom: 1px solid #e8e8ed; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+.modal-header h3 { font-size: 15px; font-weight: 600; }
+.modal-close { cursor: pointer; font-size: 22px; color: #999; line-height: 1; padding: 0 4px; }
+.modal-close:hover { color: #1d1d1f; }
+.modal-body { flex: 1; padding: 20px; overflow-y: auto; }
+.modal-body pre { white-space: pre-wrap; font-size: 13px; line-height: 1.6; margin: 0; }
+.modal-body iframe { width: 100%; height: 100%; border: none; }
+.modal-body .empty-state { color: #999; font-size: 14px; text-align: center; padding: 60px 0; }
+.content { flex: 1; overflow-y: auto; padding: 24px; }
+
+/* ── Tab Content ── */
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+
+/* ── Cards ── */
+.card { background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.card h3 { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.card p { font-size: 13px; color: #666; margin-bottom: 8px; }
+
+/* ── Forms ── */
+.form-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: flex-end; }
+.form-row label { font-size: 12px; color: #666; min-width: 60px; }
+.form-row input, .form-row select { flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 13px; }
+.form-row input:focus, .form-row select:focus { outline: none; border-color: #007aff; box-shadow: 0 0 0 3px rgba(0,122,255,0.1); }
+.btn { padding: 8px 20px; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500; }
+.btn-primary { background: #007aff; color: #fff; }
+.btn-primary:hover { background: #0066d6; }
+.btn-primary:disabled { background: #a0c4ff; cursor: not-allowed; }
+.btn-success { background: #30d158; color: #fff; }
+.btn-success:hover { background: #28ba4a; }
+.btn-outline { background: transparent; border: 1px solid #d2d2d7; color: #1d1d1f; }
+.btn-outline:hover { background: #f5f5f7; }
+
+/* ── Phase Indicator ── */
+.phases { display: flex; gap: 8px; margin: 12px 0; }
+.phase { flex: 1; text-align: center; padding: 10px; border-radius: 8px; background: #f5f5f7; font-size: 12px; }
+.phase.active { background: #007aff; color: #fff; }
+.phase.done { background: #30d158; color: #fff; }
+
+/* ── Log Box ── */
+.log-box { background: #1d1d1f; color: #fff; border-radius: 8px; padding: 12px; font-family: "SF Mono", Menlo, monospace; font-size: 12px; line-height: 1.5; height: 360px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+.log-box .log-info { color: #5ac8fa; }
+.log-box .log-ok { color: #30d158; }
+.log-box .log-err { color: #ff453a; }
+.log-box .log-warn { color: #ff9f0a; }
+
+/* ── Download Links ── */
+.download-links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.download-links a { padding: 6px 14px; background: #f5f5f7; border-radius: 6px; text-decoration: none; font-size: 12px; color: #007aff; }
+.download-links a:hover { background: #e8e8ed; }
+
+/* ── Writing Library ── */
+.lib-pane { display: flex; gap: 16px; height: calc(100vh - 160px); }
+.lib-tree { width: 280px; overflow-y: auto; background: #fff; border-radius: 12px; padding: 12px; flex-shrink: 0; }
+.lib-tree .tree-item { padding: 4px 8px; cursor: pointer; font-size: 13px; border-radius: 4px; display: flex; align-items: center; gap: 4px; }
+.lib-tree .tree-item:hover { background: #f0f0f5; }
+.lib-tree .tree-item.file { margin-left: 20px; }
+.lib-tree .tree-item .icon { width: 16px; text-align: center; }
+.lib-preview { flex: 1; background: #fff; border-radius: 12px; padding: 16px; overflow-y: auto; }
+.lib-preview .preview-content { white-space: pre-wrap; font-size: 13px; line-height: 1.6; font-family: "SF Mono", Menlo, monospace; }
+.lib-preview .preview-content img { max-width: 100%; }
+
+/* ── SKILL.md display ── */
+.skill-display { background: #fff; border-radius: 12px; padding: 20px; white-space: pre-wrap; font-size: 13px; line-height: 1.6; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sidebar { width: 56px; }
+  .sidebar .nav-item span, .sidebar .cat-label { display: none; }
+  .lib-pane { flex-direction: column; }
+  .lib-tree { width: 100%; max-height: 200px; }
+}
+
+/* ── Blogger View ── */
+.blogger-view { display: flex; gap: 16px; height: calc(100vh - 120px); }
+.blogger-list { width: 260px; overflow-y: auto; background: #fff; border-radius: 12px; padding: 12px; flex-shrink: 0; }
+.blogger-card { padding: 12px; border-radius: 10px; cursor: pointer; margin-bottom: 8px; border: 2px solid transparent; transition: all .15s; }
+.blogger-card:hover { background: #f5f5fa; }
+.blogger-card.active { border-color: #ff6b6b; background: #fff5f5; }
+.blogger-card .bc-name { font-weight: 600; font-size: 14px; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.blogger-card .bc-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg,#ff6b6b,#ee5a9b); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+.blogger-card .bc-stats { font-size: 11px; color: #888; display: flex; gap: 8px; flex-wrap: wrap; }
+.blogger-card .bc-stats span { display: inline-flex; align-items: center; gap: 2px; }
+.blogger-detail { flex: 1; background: #fff; border-radius: 12px; padding: 20px; overflow-y: auto; }
+.blogger-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #f0f0f5; }
+.blogger-header .bh-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,#ff6b6b,#ee5a9b); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 24px; font-weight: 700; flex-shrink: 0; }
+.blogger-header .bh-info { flex: 1; }
+.blogger-header .bh-name { font-size: 20px; font-weight: 700; }
+.blogger-header .bh-desc { font-size: 12px; color: #888; margin-top: 4px; max-height: 36px; overflow: hidden; }
+.blogger-header .bh-stats { display: flex; gap: 16px; margin-top: 8px; }
+.blogger-header .bh-stat { text-align: center; }
+.blogger-header .bh-stat-val { font-size: 18px; font-weight: 700; color: #ff6b6b; }
+.blogger-header .bh-stat-label { font-size: 11px; color: #999; }
+.detail-tabs { display: flex; gap: 0; border-bottom: 2px solid #f0f0f5; margin-bottom: 16px; }
+.detail-tab { padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; color: #888; transition: all .15s; }
+.detail-tab:hover { color: #333; }
+.detail-tab.active { color: #ff6b6b; border-bottom-color: #ff6b6b; }
+.detail-panel { display: none; }
+.detail-panel.active { display: block; }
+.post-card { background: #f9f9fb; border-radius: 10px; padding: 14px; margin-bottom: 10px; cursor: pointer; border: 1px solid #e8e8ed; transition: all .15s; }
+.post-card:hover { border-color: #ff6b6b; box-shadow: 0 2px 8px rgba(255,107,107,.12); }
+.post-card .pc-title { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+.post-card .pc-meta { font-size: 11px; color: #888; display: flex; gap: 10px; }
+.post-card .pc-tags { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+.post-card .pc-tag { background: #fff0f0; color: #ff6b6b; font-size: 11px; padding: 1px 8px; border-radius: 10px; }
+.post-content { background: #f9f9fb; border-radius: 10px; padding: 16px; margin-top: 8px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; border: 1px solid #e8e8ed; }
+.md-content { font-size: 13px; line-height: 1.8; }
+.md-content h1 { font-size: 18px; font-weight: 700; margin: 16px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f5; }
+.md-content h2 { font-size: 16px; font-weight: 700; margin: 14px 0 6px; }
+.md-content h3 { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
+.md-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
+.md-content th, .md-content td { border: 1px solid #e8e8ed; padding: 6px 10px; text-align: left; }
+.md-content th { background: #f5f5fa; font-weight: 600; }
+.md-content code { background: #f5f5fa; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.md-content blockquote { border-left: 3px solid #ff6b6b; padding-left: 12px; color: #666; margin: 8px 0; }
+.md-content ul, .md-content ol { padding-left: 20px; margin: 6px 0; }
+.md-content li { margin: 2px 0; }
+.md-content strong { color: #ff6b6b; }
+.md-content hr { border: none; border-top: 1px solid #e8e8ed; margin: 12px 0; }
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat-item { background: #f9f9fb; border-radius: 10px; padding: 12px; text-align: center; }
+.stat-item .si-val { font-size: 22px; font-weight: 700; color: #ff6b6b; }
+.stat-item .si-label { font-size: 11px; color: #999; margin-top: 2px; }
+.category-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.category-bar .cb-name { width: 80px; text-align: right; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.category-bar .cb-fill { height: 20px; background: linear-gradient(90deg,#ff6b6b,#ee5a9b); border-radius: 4px; min-width: 4px; transition: width .3s; }
+.category-bar .cb-pct { font-size: 11px; color: #888; }
+
+@media (max-width: 768px) {
+  .blogger-view { flex-direction: column; }
+  .blogger-list { width: 100%; max-height: 200px; }
+}
+
+/* ── Rewrite View ── */
+.rewrite-view { display: flex; gap: 16px; height: calc(100vh - 120px); }
+.rewrite-params { width: 280px; overflow-y: auto; background: #fff; border-radius: 12px; padding: 16px; flex-shrink: 0; }
+.rp-section { margin-bottom: 16px; }
+.rp-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.rp-select { width: 100%; padding: 8px 10px; border: 1px solid #e8e8ed; border-radius: 8px; font-size: 13px; background: #f9f9fb; outline: none; }
+.rp-select:focus { border-color: #ff6b6b; }
+.rp-preview { font-size: 11px; color: #888; margin-top: 4px; max-height: 60px; overflow: hidden; line-height: 1.4; }
+.rp-range { width: 100%; accent-color: #ff6b6b; }
+.rp-range-labels { display: flex; justify-content: space-between; font-size: 10px; color: #bbb; margin-top: 2px; }
+.rp-input { width: 100%; padding: 8px 10px; border: 1px solid #e8e8ed; border-radius: 8px; font-size: 12px; background: #f9f9fb; outline: none; margin-bottom: 6px; box-sizing: border-box; }
+.rp-input:focus { border-color: #ff6b6b; }
+.rp-btn { width: 100%; padding: 12px; background: linear-gradient(135deg,#ff6b6b,#ee5a9b); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .15s; }
+.rp-btn:hover { opacity: .9; transform: translateY(-1px); }
+.rp-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.rewrite-main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.rm-input { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.rm-output { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+.rm-label { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+.rm-textarea { flex: 1; padding: 12px; border: 1px solid #e8e8ed; border-radius: 10px; font-size: 13px; line-height: 1.6; resize: none; outline: none; background: #fff; font-family: inherit; }
+.rm-textarea:focus { border-color: #ff6b6b; }
+.rm-result { flex: 1; padding: 12px; border: 1px solid #e8e8ed; border-radius: 10px; font-size: 13px; line-height: 1.8; overflow-y: auto; background: #f9f9fb; white-space: pre-wrap; }
+.rm-result .md-content { font-size: 13px; line-height: 1.8; }
+.rm-copy-btn { font-size: 11px; padding: 2px 10px; border: 1px solid #e8e8ed; border-radius: 6px; background: #fff; cursor: pointer; color: #888; }
+.rm-copy-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+
+@media (max-width: 768px) {
+  .rewrite-view { flex-direction: column; }
+  .rewrite-params { width: 100%; max-height: 300px; }
+}
+
+/* ── Post Dive View ── */
+.pd-view { display: flex; gap: 16px; height: calc(100vh - 120px); }
+.pd-main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; }
+.pd-input-card { flex-shrink: 0; }
+.pd-log-section { background: #fff; border-radius: 12px; overflow: hidden; }
+.pd-section-header { padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer; user-select: none; border-bottom: 1px solid #f0f0f5; }
+.pd-section-header:hover { background: #f9f9fb; }
+.pd-result { flex: 1; background: #fff; border-radius: 12px; padding: 20px; overflow-y: auto; min-height: 200px; }
+.pd-result .md-content { font-size: 13px; line-height: 1.8; }
+.pd-history { width: 280px; background: #fff; border-radius: 12px; padding: 12px; flex-shrink: 0; overflow-y: auto; }
+.pdh-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #f0f0f5; }
+.pdh-item { padding: 10px; border-radius: 8px; cursor: pointer; margin-bottom: 6px; border: 1px solid transparent; transition: all .15s; }
+.pdh-item:hover { background: #f5f5fa; border-color: #e8e8ed; }
+.pdh-item.active { border-color: #ff6b6b; background: #fff5f5; }
+.pdh-item .pdh-name { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 3px; }
+.pdh-item .pdh-time { font-size: 11px; color: #999; }
+.pdh-item .pdh-actions { display: flex; gap: 6px; margin-top: 6px; }
+.pdh-btn { font-size: 11px; padding: 2px 8px; border-radius: 6px; border: 1px solid #e8e8ed; background: #fff; cursor: pointer; color: #666; }
+.pdh-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+.pdh-btn.primary { background: #fff0f0; color: #ff6b6b; border-color: #ffcccc; }
+
+@media (max-width: 768px) {
+  .pd-view { flex-direction: column; }
+  .pd-history { width: 100%; max-height: 200px; }
+}
+
+.history-file { background: #f9f9fb; border: 1px solid #e8e8ed; border-radius: 8px; padding: 10px 12px; width: 220px; }
+.history-file .hf-name { font-size: 12px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-file .hf-meta { font-size: 11px; color: #999; margin: 2px 0 6px; }
+.history-file .hf-actions { display: flex; gap: 6px; }
+.history-file .hf-actions button, .history-file .hf-actions a {
+  padding: 3px 10px; border: 1px solid #d2d2d7; border-radius: 4px; font-size: 11px;
+  background: #fff; color: #007aff; cursor: pointer; text-decoration: none;
+}
+.history-file .hf-actions button:hover, .history-file .hf-actions a:hover { background: #f0f0f5; }
+</style>
+</head>
+<body>
+
+<!-- ════ Sidebar ════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="logo">XHS 工具箱</div>
+  <div class="cat-label">🔧 工具类</div>
+  <a class="nav-item active" data-tab="distiller"><span>博主分析</span></a>
+  <a class="nav-item" data-tab="self-diagnose"><span>自我诊断</span></a>
+  <a class="nav-item" data-tab="post-dive"><span>帖子深挖</span></a>
+  <a class="nav-item" data-tab="copy-rewrite"><span>文案改写</span></a>
+  <div class="cat-label">📚 素材库</div>
+  <a class="nav-item" data-tab="material-blogger"><span>  博主风格</span></a>
+  <a class="nav-item" data-tab="material-self"><span>  自我参数</span></a>
+  <div class="cat-label">📋 产出</div>
+  <a class="nav-item" data-tab="history"><span>历史结果</span></a>
+</aside>
+
+<!-- ════ Main ════ -->
+<div class="main">
+  <div class="toolbar" id="toolbar">
+    <span style="font-size:13px;color:#666">环境:</span>
+    <span id="env-python"><span class="env-dot"></span>Python</span>
+    <span id="env-node"><span class="env-dot"></span>Node</span>
+    <span id="env-spider"><span class="env-dot"></span>Spider_XHS</span>
+    <span id="env-cookie" style="cursor:pointer" title="点击管理 Cookie"><span class="env-dot"></span>Cookie</span>
+    <span id="env-llm" style="cursor:pointer" title="点击配置 AI API Key"><span class="env-dot"></span>AI</span>
+    <span style="margin-left:auto;font-size:12px;color:#999" id="status-text">就绪</span>
+    <button class="btn" id="btn-stop" style="display:none;background:#ff453a;color:#fff;font-size:12px;padding:4px 14px" onclick="stopTask()">⏹ 终止</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ════ 博主分析（合并） ════ -->
+    <div class="tab-content active" id="tab-distiller">
+      <div class="card">
+        <h3>博主分析</h3>
+        <p>输入博主主页链接，一键完成从采集到创作指南的全部流程</p>
+        <div class="form-row">
+          <input type="text" id="dist-url" placeholder="博主主页 URL https://www.xiaohongshu.com/user/profile/..." style="flex:2">
+          <select id="dist-count" style="flex:none;width:100px">
+            <option value="5" selected>5-测试</option>
+            <option value="10">10</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="80">80</option>
+            <option value="custom">自定义</option>
+          </select>
+          <input type="number" id="dist-count-custom" value="30" min="1" max="200" style="flex:none;width:80px;display:none" placeholder="数量">
+          <button class="btn btn-primary" id="btn-one-click" onclick="startOneClick()" style="background:linear-gradient(135deg,#ff6b6b,#ee5a9b);font-weight:600;padding:8px 28px">🚀 一键分析</button>
+        </div>
+      </div>
+
+      <div class="phases" id="phases">
+        <div class="phase" id="phase1">① 采集笔记</div>
+        <div class="phase" id="phase2">② 内容分析</div>
+        <div class="phase" id="phase3a">③ 风格蒸馏</div>
+      </div>
+
+      <!-- 进度条 -->
+      <div id="pipeline-progress-bar" style="display:none;margin-bottom:16px">
+        <div style="background:#e8e8ed;border-radius:6px;height:8px;overflow:hidden">
+          <div id="pipeline-progress-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#ff6b6b,#ee5a9b);border-radius:6px;transition:width 0.5s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span id="pipeline-progress-label" style="font-size:12px;color:#666">准备中...</span>
+          <span id="pipeline-progress-pct" style="font-size:12px;color:#999">0%</span>
+        </div>
+      </div>
+
+      <!-- 分步操作已移除 -->
+
+      <!-- 阶段结果展示 -->
+      <div class="card" id="phase-result" style="display:none">
+        <div id="phase-result-content"></div>
+      </div>
+
+      <!-- 日志（可折叠） -->
+      <div class="card">
+        <div style="font-size:12px;color:#999;margin-bottom:6px;cursor:pointer" onclick="toggleLog(this)">
+          ▶ 运行日志 <span style="font-weight:400">（点击展开/折叠）</span>
+        </div>
+        <div class="log-box" id="log-distiller" style="display:none"></div>
+        <div class="download-links" id="dl-distiller"></div>
+      </div>
+    </div>
+
+    <!-- ════ 自我诊断 ════ -->
+    <div class="tab-content" id="tab-self-diagnose">
+      <div class="card">
+        <h3>自我诊断</h3>
+        <p>一键完成从采集到基因诊断的全部流程，认识自己的创作风格</p>
+        <div style="background:#f0f7ff;border-radius:8px;padding:12px;margin-bottom:12px;font-size:13px;line-height:1.6">
+          <strong>📌</strong> 自我诊断需要知道你的小红书主页链接。优先使用 Cookie 自动识别，失败时请手动输入。
+          <br>
+          <span id="self-account-info" style="color:#666">当前登录账号：<span id="self-account-name">检测中...</span></span>
+          <div id="self-url-row" style="display:none;margin-top:8px">
+            <input type="text" id="self-url" placeholder="你的小红书主页 URL https://www.xiaohongshu.com/user/profile/..." style="width:100%;padding:8px 12px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px">
+          </div>
+        </div>
+        <div class="form-row">
+          <select id="self-count" style="flex:none;width:100px">
+            <option value="5" selected>5-测试</option>
+            <option value="10">10</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="80">80</option>
+            <option value="custom">自定义</option>
+          </select>
+          <input type="number" id="self-count-custom" value="30" min="1" max="200" style="flex:none;width:80px;display:none" placeholder="数量">
+          <button class="btn btn-primary" id="btn-self-one-click" onclick="startSelfOneClick()" style="background:linear-gradient(135deg,#30d158,#34c759);font-weight:600;padding:8px 28px">🧬 一键诊断</button>
+        </div>
+      </div>
+
+      <div class="phases" id="phases-self">
+        <div class="phase" id="self-phase1">① 采集笔记</div>
+        <div class="phase" id="self-phase2">② 内容分析</div>
+        <div class="phase" id="self-phase3">③ 基因诊断</div>
+      </div>
+
+      <!-- 进度条 -->
+      <div id="self-progress-bar" style="display:none;margin-bottom:16px">
+        <div style="background:#e8e8ed;border-radius:6px;height:8px;overflow:hidden">
+          <div id="self-progress-fill" style="height:100%;width:0%;background:linear-gradient(90deg,#30d158,#34c759);border-radius:6px;transition:width 0.5s ease"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px">
+          <span id="self-progress-label" style="font-size:12px;color:#666">准备中...</span>
+          <span id="self-progress-pct" style="font-size:12px;color:#999">0%</span>
+        </div>
+      </div>
+
+      <!-- 分步操作已移除 -->
+
+      <!-- 阶段结果展示 -->
+      <div class="card" id="self-phase-result" style="display:none">
+        <div id="self-phase-result-content"></div>
+      </div>
+
+      <!-- 日志（可折叠） -->
+      <div class="card">
+        <div style="font-size:12px;color:#999;margin-bottom:6px;cursor:pointer" onclick="toggleLog(this)">
+          ▶ 运行日志 <span style="font-weight:400">（点击展开/折叠）</span>
+        </div>
+        <div class="log-box" id="log-self" style="display:none"></div>
+        <div class="download-links" id="dl-self"></div>
+      </div>
+    </div>
+
+    <!-- ════ 帖子深挖 ════ -->
+    <div class="tab-content" id="tab-post-dive">
+      <div class="pd-view">
+        <div class="pd-main">
+          <div class="card pd-input-card">
+            <div class="form-row">
+              <input type="text" id="pd-url" placeholder="输入小红书帖子链接 https://www.xiaohongshu.com/explore/..." style="flex:3">
+              <button class="btn btn-primary" id="btn-pd" onclick="startPostDive()">🔍 开始深挖</button>
+            </div>
+          </div>
+          <div class="pd-log-section" id="pd-log-section" style="display:none">
+            <div class="pd-section-header" onclick="toggleLog(this)">
+              ▶ 运行日志 <span style="font-weight:400;font-size:12px">（点击展开/折叠）</span>
+            </div>
+            <div class="log-box" id="log-pd" style="display:none"></div>
+            <div class="download-links" id="dl-pd"></div>
+          </div>
+          <div class="pd-result" id="pd-result">
+            <div style="color:#999;font-size:13px;text-align:center;padding:40px">
+              <div style="font-size:36px;margin-bottom:8px">📋</div>
+              <div>输入帖子链接开始深挖，或从下方历史记录中选择</div>
+            </div>
+          </div>
+        </div>
+        <div class="pd-history">
+          <div class="pdh-title">📜 深挖历史</div>
+          <div id="pd-history-list">
+            <div style="color:#999;font-size:12px;text-align:center;padding:20px">加载中...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 文案改写 ════ -->
+    <div class="tab-content" id="tab-copy-rewrite">
+      <div class="card">
+        <h3>文案改写</h3>
+        <p>粘贴原始文案，按参考风格自动改写</p>
+      </div>
+      <div class="rewrite-view">
+        <div class="rewrite-params">
+          <div class="rp-section">
+            <div class="rp-title">📖 改写规则</div>
+            <details>
+              <summary style="cursor:pointer;font-size:12px;color:#007aff">点击查看风格指南</summary>
+              <div class="skill-display" id="skill-content" style="margin-top:6px;font-size:12px;padding:10px;max-height:300px;overflow-y:auto"></div>
+            </details>
+          </div>
+          <div class="rp-section">
+            <div class="rp-title">📋 内容类型（可选）</div>
+            <select id="rw-activity" class="rp-select">
+              <option value="">不指定</option>
+              <option value="活动招募">活动招募</option>
+              <option value="活动回顾">活动回顾</option>
+              <option value="情绪共鸣">情绪共鸣</option>
+              <option value="干货攻略">干货攻略</option>
+              <option value="产品安利">产品安利</option>
+              <option value="个人分享">个人分享</option>
+            </select>
+          </div>
+          <div class="rp-section">
+            <div class="rp-title">📏 字数控制 <span id="rw-word-val" style="color:#ff6b6b">200</span>字</div>
+            <input type="range" id="rw-wordcount" min="80" max="500" value="200" step="10" class="rp-range">
+          </div>
+          <div class="rp-section" style="font-size:12px;color:#999">
+            <span id="env-llm-status">AI 状态：检查中...</span>
+          </div>
+          <button id="rw-generate-btn" class="rp-btn" onclick="startRewrite()">
+            ✨ 生成文案
+          </button>
+        </div>
+        <div class="rewrite-main">
+          <div class="rm-input">
+            <div class="rm-label">📝 参考文案</div>
+            <textarea id="rw-input" class="rm-textarea" placeholder="粘贴你想改写的文案或活动信息..."></textarea>
+          </div>
+          <div class="rm-output">
+            <div class="rm-label">✅ 生成结果 <button id="rw-copy-btn" class="rm-copy-btn" style="display:none" onclick="copyRewriteResult()">复制</button></div>
+            <div id="rw-output" class="rm-result">
+              <div style="color:#999;font-size:13px;text-align:center;padding:30px">生成结果将显示在这里</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 素材库 - 博主风格 ════ -->
+    <div class="tab-content" id="tab-material-blogger">
+      <div class="blogger-view">
+        <div class="blogger-list" id="blogger-list">
+          <div style="padding:20px;text-align:center;color:#999">加载中...</div>
+        </div>
+        <div class="blogger-detail" id="blogger-detail">
+          <div style="padding:40px;text-align:center;color:#999">
+            <div style="font-size:48px;margin-bottom:12px">👈</div>
+            <div>选择左侧博主查看详情</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 素材库 - 自我参数 ════ -->
+    <div class="tab-content" id="tab-material-self">
+      <div class="card">
+        <h3>自我参数</h3>
+        <p>自己的写作风格、目标内容、主营项目等账号参数</p>
+      </div>
+      <div class="lib-pane">
+        <div class="lib-tree" id="lib-tree-self">加载中...</div>
+        <div class="lib-preview" id="lib-preview-self">
+          <p style="color:#999;font-size:13px">选择一个文件查看内容</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════ 历史结果 ════ -->
+    <div class="tab-content" id="tab-history">
+      <div class="card">
+        <h3>历史结果</h3>
+        <p>查看所有工具的历史产出文件，支持预览和下载</p>
+      </div>
+      <div id="history-content"><p style="color:#999;font-size:13px">加载中...</p></div>
+    </div>
+
+  </div><!-- /.content -->
+</div><!-- /.main -->
+
+<!-- ════ 预览 Modal ════ -->
+<div class="modal-overlay" id="preview-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="preview-title">预览</h3>
+      <span class="modal-close" onclick="closePreview()">&times;</span>
+    </div>
+    <div class="modal-body" id="preview-body">
+      <div class="empty-state">加载中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ Cookie 管理 Modal ════ -->
+<div class="modal-overlay" id="cookie-modal">
+  <div class="modal" style="max-width:700px;width:90vw;height:auto;max-height:80vh">
+    <div class="modal-header">
+      <h3>🔑 Cookie 管理</h3>
+      <span class="modal-close" onclick="closeCookieModal()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;line-height:1.6">
+        <p style="margin-bottom:12px;color:#666">
+          小红书的 Cookie 会过期，过期后需要重新获取并粘贴到这里。
+        </p>
+        <details style="margin-bottom:12px">
+          <summary style="cursor:pointer;color:#007aff;font-size:13px">📖 如何获取 Cookie？</summary>
+          <div style="background:#f5f5f7;border-radius:8px;padding:12px;margin-top:8px;font-size:12px;line-height:1.8;color:#333">
+            1. 浏览器登录 <a href="https://www.xiaohongshu.com" target="_blank">小红书</a><br>
+            2. 按 F12 打开开发者工具 → Network（网络）标签<br>
+            3. 刷新页面，点击任意一个请求（如 feed 或 homefeed）<br>
+            4. 在 Request Headers 中找到 <code>Cookie:</code> 那一行<br>
+            5. 右键 → Copy value → 粘贴到下方输入框<br>
+            6. 点击保存
+          </div>
+        </details>
+        <div style="margin-bottom:8px">
+          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">当前 Cookie 状态：<span id="cookie-status-preview">检查中...</span></label>
+          <textarea id="cookie-input" rows="6" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:12px;font-family:SF Mono,Menlo,monospace;resize:vertical" placeholder="在此粘贴新的 Cookie 字符串..."></textarea>
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-outline" onclick="closeCookieModal()">取消</button>
+          <button class="btn btn-primary" id="btn-save-cookie" onclick="saveCookie()">💾 保存 Cookie</button>
+        </div>
+        <div id="cookie-save-result" style="margin-top:8px;font-size:13px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ AI 配置 Modal ════ -->
+<div class="modal-overlay" id="llm-modal">
+  <div class="modal" style="max-width:600px;width:90vw;height:auto;max-height:60vh">
+    <div class="modal-header">
+      <h3>🤖 AI 配置</h3>
+      <span class="modal-close" onclick="closeLlmModal()">&times;</span>
+    </div>
+    <div class="modal-body">
+      <div style="font-size:13px;line-height:1.6">
+        <p style="margin-bottom:12px;color:#666">
+          配置 LLM API Key 用于文案改写。支持 OpenAI 兼容接口。
+        </p>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">API Key</label>
+          <input type="password" id="llm-key-input" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px;font-family:SF Mono,Menlo,monospace" placeholder="sk-...">
+        </div>
+        <div style="margin-bottom:12px">
+          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">API Base URL（可选，默认使用 MiniMax）</label>
+          <input type="text" id="llm-base-input" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px" placeholder="https://api.minimaxi.com/v1">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-outline" onclick="closeLlmModal()">取消</button>
+          <button class="btn btn-primary" id="btn-save-llm" onclick="saveLlmKey()">💾 保存</button>
+        </div>
+        <div id="llm-save-result" style="margin-top:8px;font-size:13px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  全局状态
+// ══════════════════════════════════════════
+
+const OUTPUT_DIR_PATH = "{{ output_dir }}";
+
+const STATE = {
+  currentTask: null,
+  distTask: null,
+};
+
+// ══════════════════════════════════════════
+//  Tab 切换
+// ══════════════════════════════════════════
+
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('tab-' + el.dataset.tab).classList.add('active');
+    if (el.dataset.tab === 'copy-rewrite') { loadSkillContent(); checkLlmStatus(); }
+    if (el.dataset.tab === 'material-blogger') loadMaterialBlogger();
+    if (el.dataset.tab === 'material-self') loadMaterialSelf();
+    if (el.dataset.tab === 'post-dive') loadPostDiveHistory();
+  });
+});
+
+// ══════════════════════════════════════════
+//  环境检查（含自动刷新）
+// ══════════════════════════════════════════
+
+async function checkEnv() {
+  const r = await fetch('/api/check-env');
+  const data = await r.json();
+  const c = data.checks;
+  setDot('env-python', c.python !== 'NOT_FOUND');
+  setDot('env-node', c.nodejs !== 'NOT_FOUND');
+  setDot('env-spider', c.spider_xhs !== 'NOT_FOUND');
+  setDot('env-cookie', c.env_file === 'FOUND');
+}
+function setDot(id, ok) {
+  const el = document.getElementById(id);
+  el.querySelector('.env-dot').className = 'env-dot ' + (ok ? 'ok' : 'fail');
+}
+// 立即检查，之后每 60s 自动刷新
+checkEnv();
+setInterval(checkEnv, 60000);
+
+// ── Cookie 管理 ──
+function openCookieModal() {
+  const modal = document.getElementById('cookie-modal');
+  modal.classList.add('show');
+  document.getElementById('cookie-save-result').textContent = '';
+  loadCookieInfo();
+}
+
+function closeCookieModal() {
+  document.getElementById('cookie-modal').classList.remove('show');
+  document.getElementById('cookie-input').value = '';
+  document.getElementById('cookie-save-result').textContent = '';
+}
+
+async function loadCookieInfo() {
+  const el = document.getElementById('cookie-status-preview');
+  el.textContent = '检查中...';
+  try {
+    const r = await fetch('/api/cookie-info');
+    const data = await r.json();
+    if (data.ok && data.exists) {
+      el.innerHTML = `<span style="color:#30d158">✅ 有效</span> (${data.length} 字符) <code style="background:#f5f5f7;padding:2px 6px;border-radius:4px;font-size:11px">${escapeHtml(data.preview)}</code>`;
+    } else {
+      el.innerHTML = '<span style="color:#ff453a">❌ 未配置或已过期</span>';
+    }
+  } catch {
+    el.textContent = '检查失败';
+  }
+}
+
+async function saveCookie() {
+  const cookie = document.getElementById('cookie-input').value.trim();
+  if (!cookie) { alert('请粘贴 Cookie 字符串'); return; }
+  const btn = document.getElementById('btn-save-cookie');
+  btn.disabled = true;
+  btn.textContent = '⏳ 保存中...';
+  const resultEl = document.getElementById('cookie-save-result');
+  resultEl.innerHTML = '';
+  try {
+    const r = await fetch('/api/update-cookie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cookie }),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      resultEl.innerHTML = `<span style="color:#30d158">✅ ${data.message}</span>`;
+      document.getElementById('cookie-input').value = '';
+      checkEnv();
+      loadSelfAccount();
+      loadCookieInfo();
+    } else {
+      resultEl.innerHTML = `<span style="color:#ff453a">❌ ${data.error}</span>`;
+    }
+  } catch (err) {
+    resultEl.innerHTML = `<span style="color:#ff453a">❌ ${err.message}</span>`;
+  }
+  btn.disabled = false;
+  btn.textContent = '💾 保存 Cookie';
+}
+
+document.getElementById('env-cookie').addEventListener('click', openCookieModal);
+
+document.getElementById('cookie-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeCookieModal();
+});
+
+// ── 终止按钮 ──
+function showStopBtn(show) {
+  document.getElementById('btn-stop').style.display = show ? '' : 'none';
+}
+
+async function stopTask() {
+  if (!STATE.currentTask) return;
+  const id = STATE.currentTask.id;
+  const wasPipeline = STATE.currentTask.isPipeline || false;
+  if (STATE.currentTask.eventSource) STATE.currentTask.eventSource.close();
+  try {
+    await fetch(`/api/task/${id}/stop`, { method: 'POST' });
+  } catch {}
+
+  showStopBtn(false);
+  document.getElementById('status-text').textContent = '已终止';
+
+  // 根据当前活跃 tab 重置 UI
+  const active = document.querySelector('.tab-content.active');
+  if (active) {
+    if (active.id === 'tab-self-diagnose') {
+      const btn = document.getElementById('btn-self-one-click');
+      btn.disabled = false;
+      btn.textContent = '🧬 一键诊断';
+      document.getElementById('self-progress-bar').style.display = 'none';
+      resetSelfPhases();
+      appendLog(document.getElementById('log-self'), '\n[STOP] 任务已被用户终止');
+    } else if (active.id === 'tab-distiller') {
+      const btn = document.getElementById('btn-one-click');
+      btn.disabled = false;
+      btn.textContent = '🚀 一键分析';
+      document.getElementById('pipeline-progress-bar').style.display = 'none';
+      resetPhases();
+      appendLog(document.getElementById('log-distiller'), '\n[STOP] 任务已被用户终止');
+    } else {
+      const logs = {'tab-post-dive': 'log-pd'};
+      const logId = logs[active.id];
+      if (logId) appendLog(document.getElementById(logId), '\n[STOP] 任务已被用户终止');
+    }
+  }
+
+  STATE.currentTask = null;
+}
+
+// ══════════════════════════════════════════
+//  SSE 日志流
+// ══════════════════════════════════════════
+
+function connectSSE(taskId, logElId, dlElId, onDone, onPhase, onPhaseDone, isPipeline) {
+  const logEl = document.getElementById(logElId);
+  logEl.style.display = '';
+  const toggleEl = logEl.parentElement.querySelector('[onclick*="toggleLog"]');
+  if (toggleEl) toggleEl.innerHTML = '▼ 运行日志 <span style="font-weight:400">（点击展开/折叠）</span>';
+
+  const evtSource = new EventSource(`/api/task/${taskId}/stream`);
+
+  STATE.currentTask = { id: taskId, eventSource: evtSource, isPipeline: !!isPipeline };
+  showStopBtn(true);
+  document.getElementById('status-text').textContent = `任务 ${taskId} 运行中...`;
+
+  evtSource.onmessage = (e) => {
+    try {
+      const line = JSON.parse(e.data);
+      appendLog(logEl, line);
+    } catch { appendLog(logEl, e.data); }
+  };
+
+  evtSource.addEventListener('phase', (e) => {
+    const phaseNum = parseInt(e.data);
+    if (onPhase) onPhase(phaseNum);
+  });
+
+  evtSource.addEventListener('phase_done', (e) => {
+    const phaseNum = parseInt(e.data);
+    if (onPhaseDone) onPhaseDone(phaseNum);
+  });
+
+  evtSource.addEventListener('error_event', (e) => {
+    try {
+      const msg = JSON.parse(e.data);
+      appendLog(logEl, msg);
+    } catch { appendLog(logEl, e.data); }
+  });
+
+  evtSource.addEventListener('done', (e) => {
+    evtSource.close();
+    STATE.currentTask = null;
+    showStopBtn(false);
+    let doneData = {};
+    try { doneData = JSON.parse(e.data); } catch {}
+    if (doneData.exit_code !== 0 && doneData.exit_code != null) {
+      document.getElementById('status-text').textContent = '❌ 任务失败';
+      appendLog(logEl, `\n[失败] 退出码: ${doneData.exit_code}`);
+      const fill = document.getElementById('pipeline-progress-fill');
+      const selfFill = document.getElementById('self-progress-fill');
+      if (fill) fill.style.background = 'linear-gradient(90deg,#ff3b30,#ff6b6b)';
+      if (selfFill) selfFill.style.background = 'linear-gradient(90deg,#ff3b30,#ff6b6b)';
+      const pctEl = document.getElementById('pipeline-progress-pct');
+      const selfPctEl = document.getElementById('self-progress-pct');
+      if (pctEl) pctEl.textContent = '失败';
+      if (selfPctEl) selfPctEl.textContent = '失败';
+      const labelEl = document.getElementById('pipeline-progress-label');
+      const selfLabelEl = document.getElementById('self-progress-label');
+      if (labelEl) labelEl.textContent = '❌ 任务失败，请查看日志排查问题';
+      if (selfLabelEl) selfLabelEl.textContent = '❌ 任务失败，请查看日志排查问题';
+      const btn1 = document.getElementById('btn-one-click');
+      const btn2 = document.getElementById('btn-self-one-click');
+      if (btn1 && btn1.disabled) { btn1.disabled = false; btn1.textContent = '🚀 一键分析'; }
+      if (btn2 && btn2.disabled) { btn2.disabled = false; btn2.textContent = '🧬 一键诊断'; }
+      const dlEl = document.getElementById(dlElId);
+      dlEl.innerHTML = '';
+      for (const [key, path] of Object.entries(doneData.result_files || {})) {
+        if (!path) continue;
+        const a = document.createElement('a');
+        a.href = `/api/download?path=${encodeURIComponent(path)}`;
+        a.textContent = `下载 ${key}`;
+        a.download = path.split('/').pop() || path.split('\\').pop();
+        dlEl.appendChild(a);
+      }
+    } else {
+      document.getElementById('status-text').textContent = '就绪';
+      pollStatus(taskId, logElId, dlElId, onDone);
+    }
+  });
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    STATE.currentTask = null;
+    showStopBtn(false);
+    document.getElementById('status-text').textContent = '连接断开';
+  };
+}
+
+async function pollStatus(taskId, logElId, dlElId, onDone) {
+  const poll = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/task/${taskId}/status`);
+      const data = await r.json();
+      if (data.done) {
+        clearInterval(poll);
+        showStopBtn(false);
+        appendLog(document.getElementById(logElId), `\n[完成] 退出码: ${data.exit_code}`);
+        document.getElementById('status-text').textContent = '完成';
+        // 显示下载链接
+        const dlEl = document.getElementById(dlElId);
+        dlEl.innerHTML = '';
+        for (const [key, path] of Object.entries(data.result_files || {})) {
+          const a = document.createElement('a');
+          a.href = `/api/download?path=${encodeURIComponent(path)}`;
+          a.textContent = `下载 ${key}`;
+          a.download = path.split('/').pop() || path.split('\\').pop();
+          dlEl.appendChild(a);
+        }
+        if (onDone) onDone(data);
+      }
+    } catch {}
+  }, 2000);
+  // 超时停止
+  setTimeout(() => clearInterval(poll), 300000);
+}
+
+function appendLog(el, text) {
+  el.textContent += text + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+
+// 日志折叠/展开
+function toggleLog(el) {
+  const box = el.parentElement.querySelector('.log-box');
+  const isHidden = box.style.display === 'none';
+  box.style.display = isHidden ? '' : 'none';
+  el.innerHTML = (isHidden ? '▼' : '▶') + ' 运行日志 <span style="font-weight:400">（点击展开/折叠）</span>';
+}
+
+// ══════════════════════════════════════════
+//  一键分析
+// ══════════════════════════════════════════
+
+const PHASE_LABELS = {1: '采集笔记', 2: '内容分析', 3: '风格蒸馏'};
+const PHASE_PCT = {1: 10, 2: 40, 3: 70};
+
+async function startOneClick() {
+  const btn = document.getElementById('btn-one-click');
+  const url = document.getElementById('dist-url').value.trim();
+  if (!url) { alert('请输入博主主页链接'); return; }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+  const logEl = document.getElementById('log-distiller');
+  logEl.textContent = '';
+  document.getElementById('phase-result').style.display = 'none';
+  document.getElementById('dl-distiller').innerHTML = '';
+
+  const selectVal = document.getElementById('dist-count').value;
+  let maxNotes = selectVal === 'custom'
+    ? (parseInt(document.getElementById('dist-count-custom').value) || 30)
+    : parseInt(selectVal);
+
+  const bloggerName = '';
+
+  // 重置进度
+  resetPhases();
+  showProgressBar(true);
+  updateProgress(0, '正在启动...');
+
+  try {
+    const qp = new URLSearchParams({
+      mode: 'url',
+      url: url,
+      max_notes: maxNotes,
+      blogger_name: bloggerName,
+      deep_mode: 'A',
+    });
+    const r = await fetch('/api/one-click-analyze?' + qp.toString());
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+
+    appendLog(logEl, `[INFO] 一键分析任务已创建: ${data.task_id}`);
+    document.getElementById('status-text').textContent = `一键分析 ${data.task_id}`;
+
+    connectSSE(
+      data.task_id,
+      'log-distiller',
+      'dl-distiller',
+      (statusData) => {
+        setPhase(3, 'done');
+        updateProgress(100, '🎉 全部完成！');
+        btn.disabled = false;
+        btn.textContent = '🚀 一键分析';
+        showPipelineResult(statusData);
+      },
+      (phaseNum) => {
+        setPhase(phaseNum, 'active');
+        updateProgress(PHASE_PCT[phaseNum] || 0, `正在${PHASE_LABELS[phaseNum] || ''}...`);
+        appendLog(logEl, `\n${'='.repeat(40)}\n[阶段 ${phaseNum}] ${PHASE_LABELS[phaseNum]}\n${'='.repeat(40)}`);
+      },
+      (phaseNum) => {
+        setPhase(phaseNum, 'done');
+        const donePct = phaseNum * 33;
+        updateProgress(donePct, `✅ ${PHASE_LABELS[phaseNum]}完成`);
+      },
+      true
+    );
+  } catch (err) {
+    appendLog(logEl, `[ERROR] ${err.message || err}`);
+    btn.disabled = false;
+    btn.textContent = '🚀 一键分析';
+    showProgressBar(false);
+    document.getElementById('status-text').textContent = '出错';
+  }
+}
+
+function showProgressBar(show) {
+  document.getElementById('pipeline-progress-bar').style.display = show ? '' : 'none';
+}
+
+function updateProgress(pct, label) {
+  document.getElementById('pipeline-progress-fill').style.width = pct + '%';
+  document.getElementById('pipeline-progress-pct').textContent = pct + '%';
+  document.getElementById('pipeline-progress-label').textContent = label;
+}
+
+function resetPhases() {
+  ['phase1', 'phase2', 'phase3a'].forEach(id => {
+    document.getElementById(id).className = 'phase';
+  });
+}
+
+function setPhase(n, state) {
+  const phases = {1:'phase1', 2:'phase2', 3:'phase3a'};
+  const el = document.getElementById(phases[n]);
+  el.className = 'phase ' + state;
+}
+
+function showPipelineResult(statusData) {
+  const card = document.getElementById('phase-result');
+  const content = document.getElementById('phase-result-content');
+  const files = statusData.result_files || {};
+  let fileLinks = '';
+  if (files.details_json) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.details_json)}" style="font-size:12px;text-decoration:none">📥 原始数据</a> `;
+  if (files.analysis_json) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.analysis_json)}" style="font-size:12px;text-decoration:none">📊 分析报告</a> `;
+  if (files.data_draft) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.data_draft)}" style="font-size:12px;text-decoration:none">📄 数据底稿</a> `;
+  if (files.ai_task) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.ai_task)}" style="font-size:12px;text-decoration:none">🤖 AI 蒸馏任务</a> `;
+  if (!fileLinks) fileLinks = '<span style="color:#999">产出文件已保存，可在历史结果中查看</span>';
+
+  content.innerHTML = `<div style="display:flex;align-items:center;gap:16px">
+    <span style="font-size:40px">🎉</span>
+    <div style="flex:1">
+      <strong style="font-size:18px">一键分析完成</strong>
+      <p style="font-size:13px;color:#666;margin:4px 0 0">采集 → 分析 → 蒸馏 全部完成，创作指南已生成</p>
+    </div>
+  </div>
+  <div style="margin-top:12px;padding:12px;background:#f5f5f7;border-radius:8px;font-size:13px;color:#666">
+    ${fileLinks}
+  </div>`;
+  card.style.display = '';
+}
+
+// ══════════════════════════════════════════
+//  自我诊断 — 一键
+// ══════════════════════════════════════════
+
+const SELF_PHASE_LABELS = {1: '采集笔记', 2: '内容分析', 3: '基因诊断'};
+
+async function startSelfOneClick() {
+  const btn = document.getElementById('btn-self-one-click');
+  btn.disabled = true;
+  btn.textContent = '⏳ 诊断中...';
+  const logEl = document.getElementById('log-self');
+  logEl.textContent = '';
+  document.getElementById('self-phase-result').style.display = 'none';
+  document.getElementById('dl-self').innerHTML = '';
+
+  const selectVal = document.getElementById('self-count').value;
+  let maxNotes = selectVal === 'custom'
+    ? (parseInt(document.getElementById('self-count-custom').value) || 30)
+    : parseInt(selectVal);
+
+  // 检查：如果无法自动识别且没有手动输入 URL，提前提示
+  const autoFailed = document.getElementById('self-account-name').innerHTML.includes('⚠️');
+  const manualUrl = document.getElementById('self-url').value.trim();
+  if (autoFailed && !manualUrl) {
+    alert('Cookie 无法自动识别你的账号，请在下方输入框中粘贴你的小红书主页 URL');
+    btn.disabled = false;
+    btn.textContent = '🧬 一键诊断';
+    return;
+  }
+
+  resetSelfPhases();
+  document.getElementById('self-progress-bar').style.display = '';
+  updateSelfProgress(0, '正在启动...');
+
+  try {
+    const qp = new URLSearchParams({
+      mode: 'self',
+      max_notes: maxNotes,
+      deep_mode: 'B',
+    });
+    if (manualUrl) qp.set('url', manualUrl);
+    const r = await fetch('/api/one-click-analyze?' + qp.toString());
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+
+    appendLog(logEl, `[INFO] 一键诊断任务已创建: ${data.task_id}`);
+    document.getElementById('status-text').textContent = `一键诊断 ${data.task_id}`;
+
+    connectSSE(
+      data.task_id,
+      'log-self',
+      'dl-self',
+      (statusData) => {
+        setSelfPhase(3, 'done');
+        updateSelfProgress(100, '🎉 全部完成！');
+        btn.disabled = false;
+        btn.textContent = '🧬 一键诊断';
+        showSelfPipelineResult(statusData);
+      },
+      (phaseNum) => {
+        setSelfPhase(phaseNum, 'active');
+        updateSelfProgress(PHASE_PCT[phaseNum] || 0, `正在${SELF_PHASE_LABELS[phaseNum] || ''}...`);
+        appendLog(logEl, `\n${'='.repeat(40)}\n[阶段 ${phaseNum}] ${SELF_PHASE_LABELS[phaseNum]}\n${'='.repeat(40)}`);
+      },
+      (phaseNum) => {
+        setSelfPhase(phaseNum, 'done');
+        const donePct = phaseNum * 33;
+        updateSelfProgress(donePct, `✅ ${SELF_PHASE_LABELS[phaseNum]}完成`);
+      },
+      true
+    );
+  } catch (err) {
+    appendLog(logEl, `[ERROR] ${err.message || err}`);
+    btn.disabled = false;
+    btn.textContent = '🧬 一键诊断';
+    document.getElementById('self-progress-bar').style.display = 'none';
+    document.getElementById('status-text').textContent = '出错';
+  }
+}
+
+function updateSelfProgress(pct, label) {
+  document.getElementById('self-progress-fill').style.width = pct + '%';
+  document.getElementById('self-progress-pct').textContent = pct + '%';
+  document.getElementById('self-progress-label').textContent = label;
+}
+
+function resetSelfPhases() {
+  ['self-phase1', 'self-phase2', 'self-phase3'].forEach(id => {
+    document.getElementById(id).className = 'phase';
+  });
+}
+
+function showSelfPipelineResult(statusData) {
+  const card = document.getElementById('self-phase-result');
+  const content = document.getElementById('self-phase-result-content');
+  const files = statusData.result_files || {};
+  let fileLinks = '';
+  if (files.details_json) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.details_json)}" style="font-size:12px;text-decoration:none">📥 原始数据</a> `;
+  if (files.analysis_json) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.analysis_json)}" style="font-size:12px;text-decoration:none">📊 分析报告</a> `;
+  if (files.data_draft) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.data_draft)}" style="font-size:12px;text-decoration:none">📄 数据底稿</a> `;
+  if (files.ai_task) fileLinks += `<a class="btn btn-outline" href="/api/download?path=${encodeURIComponent(files.ai_task)}" style="font-size:12px;text-decoration:none">🤖 AI 诊断任务</a> `;
+  if (!fileLinks) fileLinks = '<span style="color:#999">产出文件已保存，可在历史结果中查看</span>';
+
+  content.innerHTML = `<div style="display:flex;align-items:center;gap:16px">
+    <span style="font-size:40px">🧬</span>
+    <div style="flex:1">
+      <strong style="font-size:18px">一键诊断完成</strong>
+      <p style="font-size:13px;color:#666;margin:4px 0 0">采集 → 分析 → 基因诊断 全部完成，创作基因报告已生成</p>
+    </div>
+  </div>
+  <div style="margin-top:12px;padding:12px;background:#f5f5f7;border-radius:8px;font-size:13px;color:#666">
+    ${fileLinks}
+  </div>`;
+  card.style.display = '';
+}
+
+// ══════════════════════════════════════════
+//  自我诊断 — 一键（分步操作已移除）
+// ══════════════════════════════════════════
+
+
+function setSelfPhase(n, state) {
+  const phases = {1:'self-phase1', 2:'self-phase2', 3:'self-phase3'};
+  const el = document.getElementById(phases[n]);
+  el.className = 'phase ' + state;
+}
+
+// ══════════════════════════════════════════
+
+let _pdHistory = [];
+
+async function loadPostDiveHistory() {
+  if (_pdHistory.length > 0) return;
+  const listEl = document.getElementById('pd-history-list');
+  try {
+    const r = await fetch('/api/post-dive/history');
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+    _pdHistory = data.records;
+    renderPdHistory();
+  } catch {
+    listEl.innerHTML = '<div style="color:#ff453a;font-size:12px;text-align:center;padding:20px">加载失败</div>';
+  }
+}
+
+function renderPdHistory() {
+  const listEl = document.getElementById('pd-history-list');
+  if (!_pdHistory.length) {
+    listEl.innerHTML = '<div style="color:#999;font-size:12px;text-align:center;padding:20px">暂无深挖记录</div>';
+    return;
+  }
+  listEl.innerHTML = '';
+  for (const rec of _pdHistory) {
+    const item = document.createElement('div');
+    item.className = 'pdh-item';
+    item.dataset.noteId = rec.note_id;
+    item.innerHTML = `
+      <div class="pdh-name" title="${escapeHtml(rec.title)}">${escapeHtml(rec.title)}</div>
+      <div class="pdh-time">🕐 ${rec.time}</div>
+      <div class="pdh-actions">
+        <button class="pdh-btn" onclick="event.stopPropagation();viewPdResult('${escapeAttr(rec.path)}',this)">📄 查看</button>
+        <button class="pdh-btn primary" onclick="event.stopPropagation();reDivePost('${escapeAttr(rec.url)}',this)">🔄 重新深挖</button>
+      </div>`;
+    item.onclick = () => viewPdResult(rec.path);
+    listEl.appendChild(item);
+  }
+}
+
+async function viewPdResult(path, btnEl) {
+  document.querySelectorAll('.pdh-item').forEach(i => i.classList.remove('active'));
+  const item = btnEl ? btnEl.closest('.pdh-item') : document.querySelector(`.pdh-item`);
+  if (item) item.classList.add('active');
+  const resultEl = document.getElementById('pd-result');
+  resultEl.innerHTML = '<div style="color:#999;text-align:center;padding:40px">加载中...</div>';
+  try {
+    const r = await fetch(`/api/post-dive/read?path=${encodeURIComponent(path)}`);
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+    resultEl.innerHTML = `<div class="md-content">${renderMarkdown(data.content)}</div>`;
+  } catch (err) {
+    resultEl.innerHTML = `<div style="color:#ff453a;text-align:center;padding:40px">加载失败: ${err.message}</div>`;
+  }
+}
+
+function reDivePost(url, btnEl) {
+  document.getElementById('pd-url').value = url;
+  startPostDive();
+}
+
+async function startPostDive() {
+  const url = document.getElementById('pd-url').value.trim();
+  if (!url) { alert('请输入帖子链接'); return; }
+  const btn = document.getElementById('btn-pd');
+  btn.disabled = true;
+  const logSection = document.getElementById('pd-log-section');
+  logSection.style.display = '';
+  const logEl = document.getElementById('log-pd');
+  logEl.textContent = '';
+  logEl.style.display = '';
+  const resultEl = document.getElementById('pd-result');
+  resultEl.innerHTML = '<div style="color:#999;text-align:center;padding:40px"><div style="font-size:24px;margin-bottom:8px">⏳</div>正在分析中，请稍候...</div>';
+
+  try {
+    document.getElementById('dl-pd').innerHTML = '';
+    appendLog(logEl, '[INFO] 正在启动帖子分析...');
+    const r = await fetch('/api/start-post-dive?' + new URLSearchParams({ url }));
+    const data = await r.json();
+    if (!data.ok) { throw new Error(data.error); }
+    appendLog(logEl, '[INFO] 任务已创建');
+    connectSSE(data.task_id, 'log-pd', 'dl-pd', () => {
+      btn.disabled = false;
+      _pdHistory = [];
+      loadPostDiveHistory();
+      _autoLoadPdResult(url);
+    });
+  } catch (err) {
+    appendLog(logEl, '[ERROR] ' + (err.message || err));
+    btn.disabled = false;
+    resultEl.innerHTML = `<div style="color:#ff453a;text-align:center;padding:40px">启动失败: ${err.message}</div>`;
+  }
+}
+
+async function _autoLoadPdResult(url) {
+  let noteId = 'unknown';
+  for (const pat of ['/item/', '/explore/']) {
+    if (pat in url || url.includes(pat)) {
+      noteId = url.split(pat).pop().split('?')[0];
+      break;
+    }
+  }
+  if (noteId === 'unknown') {
+    const m = url.match(/\/(?:item|explore)\/([a-f0-9]+)/);
+    if (m) noteId = m[1];
+  }
+  const pd_dir = OUTPUT_DIR_PATH || '';
+  const expectedPath = `${pd_dir}\\帖子深挖\\帖子分析_${noteId}.md`;
+  const resultEl = document.getElementById('pd-result');
+  try {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    const r = await fetch(`/api/post-dive/read?path=${encodeURIComponent(expectedPath)}`);
+    const data = await r.json();
+    if (data.ok) {
+      resultEl.innerHTML = `<div class="md-content">${renderMarkdown(data.content)}</div>`;
+      return;
+    }
+  } catch {}
+  const historyR = await fetch('/api/post-dive/history');
+  const historyData = await historyR.json();
+  if (historyData.ok && historyData.records.length > 0) {
+    const latest = historyData.records[0];
+    const rr = await fetch(`/api/post-dive/read?path=${encodeURIComponent(latest.path)}`);
+    const rd = await rr.json();
+    if (rd.ok) {
+      resultEl.innerHTML = `<div class="md-content">${renderMarkdown(rd.content)}</div>`;
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+//  文案改写
+// ══════════════════════════════════════════
+
+let _rewriteRunning = false;
+
+document.getElementById('rw-wordcount').oninput = function() {
+  document.getElementById('rw-word-val').textContent = this.value;
+};
+
+async function loadSkillContent() {
+  const el = document.getElementById('skill-content');
+  el.textContent = '加载中...';
+  try {
+    const r = await fetch('/api/copy-rewrite-content');
+    const data = await r.json();
+    el.textContent = data.content || '未找到内容';
+  } catch { el.textContent = '加载失败'; }
+}
+
+async function startRewrite() {
+  if (_rewriteRunning) return;
+  const text = document.getElementById('rw-input').value.trim();
+  if (!text) { alert('请输入需要改写的文案'); return; }
+  const btn = document.getElementById('rw-generate-btn');
+  const outputEl = document.getElementById('rw-output');
+  const copyBtn = document.getElementById('rw-copy-btn');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ 生成中...';
+  _rewriteRunning = true;
+  outputEl.innerHTML = '';
+  copyBtn.style.display = 'none';
+
+  try {
+    const r = await fetch('/api/rewrite-copy', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text}),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      outputEl.innerHTML = '<div class="md-content">' + renderMarkdown(data.content) + '</div>';
+      copyBtn.style.display = '';
+    } else {
+      outputEl.textContent = '❌ ' + (data.error || '改写失败');
+    }
+  } catch (err) {
+    outputEl.textContent = '❌ 网络错误: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '✨ 生成文案';
+    _rewriteRunning = false;
+  }
+}
+
+function copyRewriteResult() {
+  const el = document.getElementById('rw-output');
+  const text = el.innerText || el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('rw-copy-btn');
+    btn.textContent = '已复制 ✓';
+    setTimeout(() => { btn.textContent = '复制'; }, 1500);
+  });
+}
+
+// ── AI 状态 & 配置 ──
+async function checkLlmStatus() {
+  const dot = document.querySelector('#env-llm .env-dot');
+  const statusEl = document.getElementById('env-llm-status');
+  try {
+    const r = await fetch('/api/llm-status');
+    const data = await r.json();
+    if (data.configured) {
+      dot.className = 'env-dot ok';
+      if (statusEl) statusEl.innerHTML = 'AI 状态：<span style="color:#30d158">✅ 已配置</span>';
+    } else {
+      dot.className = 'env-dot warn';
+      if (statusEl) statusEl.innerHTML = 'AI 状态：<span style="color:#ff9f0a">⚠️ 未配置</span> <a style="cursor:pointer;color:#007aff" onclick="openLlmModal()">去配置</a>';
+    }
+  } catch {
+    dot.className = 'env-dot fail';
+    if (statusEl) statusEl.textContent = 'AI 状态：检查失败';
+  }
+}
+
+document.getElementById('env-llm').addEventListener('click', openLlmModal);
+
+function openLlmModal() {
+  document.getElementById('llm-modal').classList.add('show');
+  document.getElementById('llm-save-result').textContent = '';
+  // 预填已有 key
+  fetch('/api/llm-status').then(r => r.json()).then(data => {
+    if (data.configured) {
+      document.getElementById('llm-key-input').placeholder = '已配置，输入新值覆盖';
+    }
+  }).catch(() => {});
+}
+
+function closeLlmModal() {
+  document.getElementById('llm-modal').classList.remove('show');
+}
+
+document.getElementById('llm-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeLlmModal();
+});
+
+async function saveLlmKey() {
+  const key = document.getElementById('llm-key-input').value.trim();
+  if (!key) { alert('请输入 API Key'); return; }
+  const btn = document.getElementById('btn-save-llm');
+  btn.disabled = true;
+  btn.textContent = '⏳ 保存中...';
+  const resultEl = document.getElementById('llm-save-result');
+  try {
+    const r = await fetch('/api/save-llm-key', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({key}),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      resultEl.innerHTML = '<span style="color:#30d158">✅ ' + data.message + '</span>';
+      document.getElementById('llm-key-input').value = '';
+      checkLlmStatus();
+      setTimeout(closeLlmModal, 1000);
+    } else {
+      resultEl.innerHTML = '<span style="color:#ff453a">❌ ' + (data.error || '保存失败') + '</span>';
+    }
+  } catch (err) {
+    resultEl.innerHTML = '<span style="color:#ff453a">❌ ' + err.message + '</span>';
+  }
+  btn.disabled = false;
+  btn.textContent = '💾 保存';
+}
+
+// 页面加载时检查 AI 状态
+checkLlmStatus();
+
+// ══════════════════════════════════════════
+//  写作库 — 树形浏览
+// ══════════════════════════════════════════
+
+let _bloggersCache = null;
+let _selectedBlogger = null;
+
+async function loadMaterialBlogger() {
+  if (_bloggersCache !== null) return;
+  const listEl = document.getElementById('blogger-list');
+  listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#999">加载中...</div>';
+  try {
+    const r = await fetch('/api/bloggers');
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+    _bloggersCache = data.bloggers;
+    listEl.innerHTML = '';
+    if (!_bloggersCache.length) {
+      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px">暂无已分析的博主<br>运行博主分析后，产出会出现在这里</div>';
+      return;
+    }
+    for (const b of _bloggersCache) {
+      const card = document.createElement('div');
+      card.className = 'blogger-card';
+      card.dataset.name = b.name;
+      const initial = b.name.charAt(0);
+      card.innerHTML = `
+        <div class="bc-name">
+          <div class="bc-avatar">${initial}</div>
+          <div style="flex:1;min-width:0">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(b.name)}</div>
+            <div class="bc-stats">
+              <span>📝${b.notes_count}篇</span>
+              <span>❤️均赞${b.avg_likes}</span>
+            </div>
+          </div>
+        </div>`;
+      card.onclick = () => selectBlogger(b.name);
+      listEl.appendChild(card);
+    }
+  } catch {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#ff453a;font-size:13px">加载失败</div>';
+  }
+}
+
+async function selectBlogger(name) {
+  document.querySelectorAll('.blogger-card').forEach(c => c.classList.toggle('active', c.dataset.name === name));
+  _selectedBlogger = name;
+  const detailEl = document.getElementById('blogger-detail');
+  detailEl.innerHTML = '<div style="padding:40px;text-align:center;color:#999">加载中...</div>';
+  try {
+    const r = await fetch(`/api/blogger/${encodeURIComponent(name)}`);
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+    renderBloggerDetail(data.blogger, detailEl);
+  } catch (err) {
+    detailEl.innerHTML = `<div style="padding:40px;text-align:center;color:#ff453a">加载失败: ${err.message}</div>`;
+  }
+}
+
+function renderBloggerDetail(b, el) {
+  const initial = b.name.charAt(0);
+  const hasPosts = b.posts && b.posts.length > 0;
+  const hasStyle = !!b.files.deep_breakdown;
+  const hasFormula = !!b.files.formula_summary;
+  const hasData = !!b.files.data_draft;
+  const hasTopic = !!b.files.topic_library;
+  const hasAnalysis = !!b.files.structured_analysis;
+
+  let tabsHtml = '';
+  if (hasPosts) tabsHtml += '<div class="detail-tab active" data-tab="posts">📝 帖子</div>';
+  if (hasStyle) tabsHtml += '<div class="detail-tab" data-tab="style">🎨 写作风格</div>';
+  tabsHtml += '<div class="detail-tab' + (!hasPosts && !hasStyle ? ' active' : '') + '" data-tab="data">📊 数据分析</div>';
+  if (hasFormula) tabsHtml += '<div class="detail-tab" data-tab="formula">📐 内容公式</div>';
+  if (hasTopic) tabsHtml += '<div class="detail-tab" data-tab="topic">💡 选题库</div>';
+  if (hasAnalysis) tabsHtml += '<div class="detail-tab" data-tab="analysis">📋 结构化分析</div>';
+
+  let catBars = '';
+  const cats = b.category_stats || {};
+  const maxPct = Math.max(...Object.values(cats).map(c => c.pct || 0), 1);
+  for (const [cat, cs] of Object.entries(cats)) {
+    catBars += `<div class="category-bar">
+      <div class="cb-name" title="${escapeHtml(cat)}">${escapeHtml(cat)}</div>
+      <div class="cb-fill" style="width:${(cs.pct / maxPct) * 60}%"></div>
+      <div class="cb-pct">${cs.count}条 ${cs.pct}% 均赞${cs.avg_likes}</div>
+    </div>`;
+  }
+
+  let postsHtml = '';
+  if (hasPosts) {
+    postsHtml = '<div class="detail-panel active" id="panel-posts">';
+    for (const p of b.posts) {
+      const tags = (p.tags || []).map(t => `<span class="pc-tag">#${escapeHtml(t)}</span>`).join('');
+      postsHtml += `<div class="post-card" onclick="togglePostContent(this)">
+        <div class="pc-title">${escapeHtml(p.title)}</div>
+        <div class="pc-meta">
+          <span>❤️ ${p.likes || 0}</span>
+          <span>⭐ ${p.collects || 0}</span>
+          <span>💬 ${p.comments_count || 0}</span>
+        </div>
+        ${tags ? `<div class="pc-tags">${tags}</div>` : ''}
+        ${p.content ? `<div class="post-content" style="display:none">${escapeHtml(p.content)}</div>` : ''}
+      </div>`;
+    }
+    postsHtml += '</div>';
+  }
+
+  el.innerHTML = `
+    <div class="blogger-header">
+      <div class="bh-avatar">${initial}</div>
+      <div class="bh-info">
+        <div class="bh-name">${escapeHtml(b.name)}</div>
+        ${b.blogger_desc ? `<div class="bh-desc">${escapeHtml(b.blogger_desc)}</div>` : ''}
+        <div class="bh-stats">
+          <div class="bh-stat"><div class="bh-stat-val">${b.notes_count}</div><div class="bh-stat-label">笔记</div></div>
+          <div class="bh-stat"><div class="bh-stat-val">${b.total_likes}</div><div class="bh-stat-label">总赞</div></div>
+          <div class="bh-stat"><div class="bh-stat-val">${b.avg_likes}</div><div class="bh-stat-label">均赞</div></div>
+          <div class="bh-stat"><div class="bh-stat-val">${b.total_collects}</div><div class="bh-stat-label">总收藏</div></div>
+          <div class="bh-stat"><div class="bh-stat-val">${b.total_comments}</div><div class="bh-stat-label">总评论</div></div>
+        </div>
+      </div>
+    </div>
+    ${catBars ? `<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">📂 内容领域</div>${catBars}</div>` : ''}
+    <div class="detail-tabs">${tabsHtml}</div>
+    ${postsHtml}
+    <div class="detail-panel${!hasPosts && !hasStyle ? ' active' : ''}" id="panel-data">
+      <div class="stat-grid">
+        <div class="stat-item"><div class="si-val">${b.notes_count}</div><div class="si-label">笔记总数</div></div>
+        <div class="stat-item"><div class="si-val">${b.avg_likes}</div><div class="si-label">均赞</div></div>
+        <div class="stat-item"><div class="si-val">${b.total_likes}</div><div class="si-label">总赞</div></div>
+        <div class="stat-item"><div class="si-val">${b.total_collects}</div><div class="si-label">总收藏</div></div>
+        <div class="stat-item"><div class="si-val">${b.total_comments}</div><div class="si-label">总评论</div></div>
+      </div>
+      <div id="data-md-content" class="md-content">加载中...</div>
+    </div>
+    ${hasStyle ? '<div class="detail-panel" id="panel-style"><div class="md-content" id="style-md-content">加载中...</div></div>' : ''}
+    ${hasFormula ? '<div class="detail-panel" id="panel-formula"><div class="md-content" id="formula-md-content">加载中...</div></div>' : ''}
+    ${hasTopic ? '<div class="detail-panel" id="panel-topic"><div class="md-content" id="topic-md-content">加载中...</div></div>' : ''}
+    ${hasAnalysis ? '<div class="detail-panel" id="panel-analysis"><div class="md-content" id="analysis-md-content">加载中...</div></div>' : ''}
+  `;
+
+  el.querySelectorAll('.detail-tab').forEach(tab => {
+    tab.onclick = () => {
+      el.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
+      el.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      const panel = el.querySelector(`#panel-${tab.dataset.tab}`);
+      if (panel) panel.classList.add('active');
+      loadTabContent(tab.dataset.tab, b);
+    };
+  });
+
+  if (b.files.data_draft) loadMdContent('data-md-content', b.files.data_draft);
+  if (hasStyle) loadMdContent('style-md-content', b.files.deep_breakdown);
+  if (hasFormula) loadMdContent('formula-md-content', b.files.formula_summary);
+  if (hasTopic) loadMdContent('topic-md-content', b.files.topic_library);
+  if (hasAnalysis) loadMdContent('analysis-md-content', b.files.structured_analysis);
+}
+
+function togglePostContent(card) {
+  const content = card.querySelector('.post-content');
+  if (!content) return;
+  content.style.display = content.style.display === 'none' ? '' : 'none';
+}
+
+async function loadMdContent(elId, filePath) {
+  const el = document.getElementById(elId);
+  if (!el || el.dataset.loaded) return;
+  el.dataset.loaded = '1';
+  try {
+    const r = await fetch(`/api/blogger-file?path=${encodeURIComponent(filePath)}`);
+    const data = await r.json();
+    if (!data.ok) { el.textContent = '加载失败'; return; }
+    el.innerHTML = renderMarkdown(data.content);
+  } catch {
+    el.textContent = '加载失败';
+  }
+}
+
+function loadTabContent(tab, blogger) {
+  const mapping = {
+    'data': 'data-md-content',
+    'style': 'style-md-content',
+    'formula': 'formula-md-content',
+    'topic': 'topic-md-content',
+    'analysis': 'analysis-md-content',
+  };
+  const elId = mapping[tab];
+  if (!elId) return;
+  const el = document.getElementById(elId);
+  if (!el || el.dataset.loaded) return;
+  const fileMapping = {
+    'data': blogger.files.data_draft,
+    'style': blogger.files.deep_breakdown,
+    'formula': blogger.files.formula_summary,
+    'topic': blogger.files.topic_library,
+    'analysis': blogger.files.structured_analysis,
+  };
+  const filePath = fileMapping[tab];
+  if (filePath) loadMdContent(elId, filePath);
+}
+
+function renderMarkdown(text) {
+  if (!text) return '';
+  let html = escapeHtml(text);
+  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+  html = html.replace(/^---+$/gm, '<hr>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+  html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
+  html = html.replace(/\|(.+)\|/g, (match) => {
+    const cells = match.split('|').filter(c => c.trim());
+    if (cells.every(c => /^[-:\s]+$/.test(c.trim()))) return '';
+    const tds = cells.map(c => `<td>${c.trim()}</td>`).join('');
+    return `<tr>${tds}</tr>`;
+  });
+  html = html.replace(/(<tr>.*<\/tr>\n?)+/g, '<table>$&</table>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\n{2,}/g, '<br><br>');
+  html = html.replace(/\n/g, '<br>');
+  return html;
+}
+
+async function loadMaterialSelf() {
+  const treeEl = document.getElementById('lib-tree-self');
+  const previewEl = document.getElementById('lib-preview-self');
+  treeEl.textContent = '加载中...';
+  try {
+    const r = await fetch('/api/material-lib/tree');
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+    const section = (data.sections || {})['自我参数'] || { tree: [], root: '' };
+    treeEl.innerHTML = '';
+    renderMaterialTree(section.tree || [], treeEl, section.root, previewEl);
+    if (!section.tree || section.tree.length === 0) {
+      treeEl.innerHTML = '<p style="color:#999;font-size:13px;text-align:center;padding:30px">暂无自我参数文件。可在 <code>素材库/自我参数/</code> 目录下手动添加。</p>';
+    }
+  } catch {
+    treeEl.innerHTML = '<p style="color:#ff453a;font-size:13px">加载失败</p>';
+  }
+}
+
+function renderMaterialTree(items, parentEl, rootPath, previewEl, depth = 0) {
+  for (const item of items) {
+    const div = document.createElement('div');
+    div.className = 'tree-item';
+    div.style.paddingLeft = (8 + depth * 16) + 'px';
+
+    if (item.type === 'dir') {
+      div.innerHTML = '<span class="icon">📁</span> ' + item.name;
+      div.onclick = () => {
+        const next = div.nextElementSibling;
+        if (next && next.classList.contains('tree-children')) {
+          next.style.display = next.style.display === 'none' ? '' : 'none';
+        }
+      };
+      parentEl.appendChild(div);
+      const childrenDiv = document.createElement('div');
+      childrenDiv.className = 'tree-children';
+      renderMaterialTree(item.children, childrenDiv, rootPath, previewEl, depth + 1);
+      parentEl.appendChild(childrenDiv);
+    } else {
+      div.innerHTML = '<span class="icon">📄</span> ' + item.name;
+      div.onclick = () => loadMaterialFile(item.path, previewEl);
+      parentEl.appendChild(div);
+    }
+  }
+}
+
+async function loadMaterialFile(path, previewEl) {
+  previewEl.innerHTML = '<p style="color:#999">加载中...</p>';
+  try {
+    const r = await fetch(`/api/material-lib/read?path=${encodeURIComponent(path)}`);
+    const data = await r.json();
+    if (!data.ok) {
+      previewEl.innerHTML = '<p style="color:#ff453a">' + data.error + '</p>';
+      return;
+    }
+    let html = `<div style="margin-bottom:8px;font-size:11px;color:#999">${data.name}</div>`;
+    html += '<div style="white-space:pre-wrap;word-break:break-all;font-size:13px;line-height:1.6;font-family:SF Mono,Menlo,monospace">' + escapeHtml(data.content) + '</div>';
+    previewEl.innerHTML = html;
+  } catch {
+    previewEl.innerHTML = '<p style="color:#ff453a">读取失败</p>';
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
+
+// ══════════════════════════════════════════
+//  快捷键
+// ══════════════════════════════════════════
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const active = document.querySelector('.tab-content.active');
+    if (active) {
+      const id = active.id;
+      if (id === 'tab-distiller' && !document.getElementById('btn-one-click').disabled) startOneClick();
+      else if (id === 'tab-self-diagnose' && !document.getElementById('btn-self-one-click').disabled) startSelfOneClick();
+      else if (id === 'tab-post-dive' && !document.getElementById('btn-pd').disabled) startPostDive();
+    }
+  }
+});
+
+// ══════════════════════════════════════════
+//  历史结果
+// ══════════════════════════════════════════
+
+async function loadHistory() {
+  const container = document.getElementById('history-content');
+  container.innerHTML = '<p style="color:#999">加载中...</p>';
+  try {
+    const r = await fetch('/api/history-results');
+    const data = await r.json();
+    if (!data.ok) { container.innerHTML = '<p style="color:#ff453a">加载失败</p>'; return; }
+    renderHistory(data.results, container);
+  } catch {
+    container.innerHTML = '<p style="color:#ff453a">加载失败</p>';
+  }
+}
+
+function renderHistory(results, container) {
+  let html = '';
+  for (const [tool, categories] of Object.entries(results)) {
+    let hasItems = false;
+    let catHtml = '';
+    for (const [catName, files] of Object.entries(categories)) {
+      if (!files.length) continue;
+      hasItems = true;
+      catHtml += `<div style="margin-bottom:12px">
+        <div style="font-size:12px;color:#666;margin-bottom:6px;font-weight:600">${catName}</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">`;
+      for (const f of files) {
+        const sizeStr = f.size > 1024 ? (f.size > 1048576 ? (f.size/1048576).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB') : f.size+'B';
+        catHtml += `<div class="history-file" data-path="${encodeURIComponent(f.path)}" data-ext="${f.ext}">
+          <div class="hf-name">${f.name}</div>
+          <div class="hf-meta">${f.mtime} · ${sizeStr}</div>
+          <div class="hf-actions">
+            <button onclick="previewFile('${encodeURIComponent(f.path)}','${f.ext}')">预览</button>
+            <a href="/api/download?path=${encodeURIComponent(f.path)}" download>下载</a>
+            <button onclick="deleteFile('${encodeURIComponent(f.path)}')" style="color:#ff453a">删除</button>
+          </div>
+        </div>`;
+      }
+      catHtml += `</div></div>`;
+    }
+    if (!hasItems) continue;
+    html += `<div class="card" style="margin-bottom:12px">
+      <h3 style="margin-bottom:8px">${tool}</h3>
+      ${catHtml}
+    </div>`;
+  }
+  if (!html) {
+    html = '<div class="card"><p style="color:#999;text-align:center;padding:20px">暂无历史产出文件。运行工具后结果会出现在这里。</p></div>';
+  }
+  container.innerHTML = html;
+}
+
+// ══════════════════════════════════════════
+//  文件预览
+// ══════════════════════════════════════════
+
+async function previewFile(encodedPath, ext) {
+  const modal = document.getElementById('preview-modal');
+  const title = document.getElementById('preview-title');
+  const body = document.getElementById('preview-body');
+  modal.classList.add('show');
+  body.innerHTML = '<div class="empty-state">加载中...</div>';
+
+  try {
+    const path = decodeURIComponent(encodedPath);
+    title.textContent = path.split('/').pop() || path.split('\\').pop();
+
+    if (ext === '.html') {
+      // HTML 文件用 iframe 渲染
+      body.innerHTML = `<iframe src="/api/download?path=${encodedPath}"></iframe>`;
+      return;
+    }
+
+    const r = await fetch(`/api/file-preview?path=${encodedPath}`);
+    const data = await r.json();
+    if (!data.ok) {
+      if (data.binary) {
+        body.innerHTML = `<div class="empty-state">二进制文件，请在预览窗口外使用下载</div>`;
+      } else {
+        body.innerHTML = `<div class="empty-state">${data.error || '读取失败'}</div>`;
+      }
+      return;
+    }
+
+    if (ext === '.md') {
+      // Markdown：简单渲染为可读格式
+      body.innerHTML = renderMarkdown(data.content);
+    } else if (ext === '.json') {
+      // JSON：格式化显示
+      try {
+        const formatted = JSON.stringify(JSON.parse(data.content), null, 2);
+        body.innerHTML = `<pre>${escapeHtml(formatted)}</pre>`;
+      } catch {
+        body.innerHTML = `<pre>${escapeHtml(data.content)}</pre>`;
+      }
+    } else {
+      body.innerHTML = `<pre>${escapeHtml(data.content)}</pre>`;
+    }
+  } catch {
+    body.innerHTML = '<div class="empty-state">加载失败</div>';
+  }
+}
+
+function renderMarkdownSimple(md) {
+  let html = escapeHtml(md);
+  html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li>$1. $2</li>');
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\n\n/g, '<br><br>');
+  return html;
+}
+
+function closePreview() {
+  document.getElementById('preview-modal').classList.remove('show');
+  document.getElementById('preview-body').innerHTML = '<div class="empty-state">加载中...</div>';
+}
+
+async function deleteFile(encodedPath) {
+  if (!confirm('确定要删除这个文件吗？')) return;
+  const path = decodeURIComponent(encodedPath);
+  try {
+    const r = await fetch('/api/delete-file', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+    const data = await r.json();
+    if (data.ok) {
+      loadHistory();
+    } else {
+      alert('删除失败: ' + (data.error || '未知错误'));
+    }
+  } catch (err) {
+    alert('删除失败: ' + err.message);
+  }
+}
+
+// 点击蒙层关闭
+document.getElementById('preview-modal').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closePreview();
+});
+
+// ESC 关闭
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePreview();
+});
+
+// 条数下拉 → 自定义输入框显隐
+['dist-count', 'self-count'].forEach(id => {
+  document.getElementById(id).addEventListener('change', function() {
+    const customId = id.replace('count', 'count-custom');
+    document.getElementById(customId).style.display = this.value === 'custom' ? '' : 'none';
+  });
+});
+
+// 切换 tab 时加载历史
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    if (el.dataset.tab === 'history') loadHistory();
+    if (el.dataset.tab === 'self-diagnose') { loadSelfAccount(); }
+  });
+});
+
+// 获取当前登录账号信息
+async function loadSelfAccount() {
+  const el = document.getElementById('self-account-name');
+  const infoBox = el.closest('div');
+  el.textContent = '检测中...';
+  try {
+    const r = await fetch('/api/self-account');
+    const data = await r.json();
+    if (data.ok && data.nickname) {
+      el.innerHTML = `<strong>${data.nickname}</strong> <span style="color:#999;font-size:12px">(ID: ${data.user_id})</span>`;
+      document.getElementById('self-url-row').style.display = 'none';
+    } else if (document.querySelector('#env-cookie .env-dot').classList.contains('ok')) {
+      el.innerHTML = '⚠️ Cookie 存在但无法自动识别账号，请手动输入你的主页链接 ↓';
+      el.style.color = '#ff9f0a';
+      document.getElementById('self-url-row').style.display = '';
+    } else {
+      el.textContent = '⚠️ Cookie 未配置，请在工具栏点击 Cookie 配置';
+      el.style.color = '#ff9f0a';
+    }
+  } catch {
+    el.textContent = 'Cookie 状态未知';
+    el.style.color = '#999';
+  }
+}
+
+function toggleSelfUrl() {
+  const row = document.getElementById('self-url-row');
+  const isHidden = row.style.display === 'none';
+  row.style.display = isHidden ? '' : 'none';
+}
+
+loadSelfAccount();
+
+</script>
+</body>
+</html>

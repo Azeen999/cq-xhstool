@@ -1,0 +1,29 @@
+# === 博主蒸馏器 依赖 ===
+# 安装：pip install -r requirements.txt
+
+# HTTP & 请求
+requests>=2.28
+
+# 环境变量配置
+python-dotenv>=1.0
+
+# 日志
+loguru>=0.7
+
+# JS 签名引擎（Spider_XHS 依赖）
+PyExecJS>=1.5
+
+# 重试工具
+retry>=0.9
+
+# Excel 导出
+openpyxl>=3.1
+
+# 异步 HTTP（Spider_XHS 依赖）
+aiohttp>=3.9
+
+# Web UI
+flask>=3.0
+
+# 二维码生成（Spider_XHS 登录用）
+qrcode>=7.4

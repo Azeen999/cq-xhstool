@@ -1,0 +1,38 @@
+# === 环境配置（含敏感信息）===
+.env
+*.env
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# === 采集数据（含公开笔记内容，谨慎提交）===
+data/*.json
+data/*.md
+data/.first_run_ack
+output/
+
+# === Spider_XHS 缓存 ===
+spider_xhs/data/
+spider_xhs/__pycache__/
+spider_xhs/node_modules/
+spider_xhs/.env
+spider_xhs/package-lock.json
+
+# === 系统文件 ===
+.DS_Store
+Thumbs.db
+*.log
+
+# === IDE ===
+.vscode/
+.idea/
+
+# === 个人配置 ===
+.claude/
+.openclaw/

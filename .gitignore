@@ -1,0 +1,57 @@
+# === 环境配置（含Cookie敏感信息）===
+.env
+*.env
+!.env.example
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# === 采集数据（含公开笔记内容）===
+工具类/博主蒸馏/data/*.json
+工具类/博主蒸馏/data/*.md
+工具类/博主蒸馏/data/.first_run_ack
+
+# === 工具输出 ===
+output/
+
+# === Spider_XHS 缓存 ===
+工具类/博主蒸馏/spider_xhs/data/
+工具类/博主蒸馏/spider_xhs/__pycache__/
+工具类/博主蒸馏/spider_xhs/node_modules/
+工具类/博主蒸馏/spider_xhs/.git/
+工具类/博主蒸馏/spider_xhs/.env
+工具类/博主蒸馏/spider_xhs/package-lock.json
+
+# === 系统文件 ===
+.DS_Store
+Thumbs.db
+*.log
+
+# === IDE ===
+.vscode/
+.idea/
+
+# === 个人配置 ===
+.claude/
+.openclaw/
+
+# === 敏感数据：博主风格/创作指南 ===
+素材库/自我参数/**/创作指南.skill/
+素材库/自我参数/**/分析报告/
+素材库/自我参数/**/笔记/
+素材库/自我参数/**/*.json
+素材库/自我参数/**/*.md
+素材库/自我参数/**/*.html
+素材库/自我参数/**/*.txt
+素材库/自我参数/**/*.docx
+!素材库/README.md
+工具类/博主蒸馏/references/**/*.skill/
+
+# === 分析结果 ===
+*_analysis.json

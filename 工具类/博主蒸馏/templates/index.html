@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>博主蒸馏器</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans SC", sans-serif;
+    background: #f5f3ef;
+    color: #1a1211;
+    line-height: 1.6;
+    padding: 20px;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* 头部 */
+  .header {
+    text-align: center;
+    padding: 30px 0 20px;
+    border-bottom: 2px solid #8A3926;
+    margin-bottom: 30px;
+  }
+  .header h1 { font-size: 28px; color: #8A3926; letter-spacing: 2px; }
+  .header p { color: #666; font-size: 14px; margin-top: 6px; }
+
+  /* 环境检查 */
+  .env-checks {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+    justify-content: center;
+  }
+  .env-check {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    background: #fff;
+    border: 1px solid #ddd;
+  }
+  .env-check .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .dot.green { background: #2e7d32; }
+  .dot.red { background: #c62828; }
+  .dot.yellow { background: #f9a825; }
+
+  /* 卡片 */
+  .card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .card h2 {
+    font-size: 16px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card h2 .step {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #8A3926; color: #fff;
+    font-size: 13px; font-weight: 600;
+  }
+
+  /* 表单 */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 14px; margin-bottom: 4px; color: #444; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 10px 12px;
+    border: 1px solid #ddd; border-radius: 6px;
+    font-size: 14px; background: #fafafa;
+    transition: border-color .2s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none; border-color: #8A3926;
+  }
+  .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .form-row .form-group { flex: 1; min-width: 150px; }
+
+  /* 模式选择 */
+  .mode-select {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 16px;
+  }
+  .mode-option {
+    padding: 14px; border: 2px solid #ddd; border-radius: 8px;
+    cursor: pointer; text-align: center;
+    transition: all .2s;
+  }
+  .mode-option:hover { border-color: #b0715c; }
+  .mode-option.active { border-color: #8A3926; background: #fdf0eb; }
+  .mode-option .title { font-weight: 600; font-size: 15px; }
+  .mode-option .desc { font-size: 12px; color: #666; margin-top: 4px; }
+
+  /* 按钮 */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 24px; border: none; border-radius: 6px;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: all .2s;
+  }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: #8A3926; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #6e2d1e; }
+  .btn-secondary { background: #e0ddd5; color: #333; }
+  .btn-secondary:hover:not(:disabled) { background: #d0ccc2; }
+  .btn-success { background: #2e7d32; color: #fff; }
+  .btn-success:hover:not(:disabled) { background: #1b5e20; }
+  .btn-sm { padding: 6px 14px; font-size: 12px; }
+
+  /* 日志 */
+  .log-box {
+    background: #1a1211; color: #c9d1d9;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    font-size: 12px; line-height: 1.5;
+    padding: 14px; border-radius: 6px;
+    height: 300px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all;
+    margin-top: 12px; display: none;
+  }
+  .log-box.active { display: block; }
+  .log-box .log-line { padding: 1px 0; }
+  .log-box .log-line.error { color: #ff6b6b; }
+  .log-box .log-line.success { color: #7ecf7e; }
+  .log-box .log-line.warn { color: #ffd93d; }
+
+  /* 进度条 */
+  .progress-bar {
+    height: 4px; background: #eee; border-radius: 2px;
+    margin-top: 12px; overflow: hidden; display: none;
+  }
+  .progress-bar.active { display: block; }
+  .progress-bar .fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #8A3926, #b0715c);
+    transition: width .5s;
+    border-radius: 2px;
+  }
+
+  /* 结果 */
+  .results { display: none; margin-top: 16px; }
+  .results.active { display: block; }
+  .results .file-list { display: flex; flex-direction: column; gap: 6px; }
+  .results .file-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; background: #f5f3ef; border-radius: 4px;
+    font-size: 13px;
+  }
+
+  /* 阶段指示 */
+  .phase-bar {
+    display: flex; gap: 8px; margin-bottom: 20px;
+    justify-content: center;
+  }
+  .phase-item {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; background: #e0ddd5; color: #999;
+    transition: all .3s;
+  }
+  .phase-item.active { background: #8A3926; color: #fff; }
+  .phase-item.done { background: #2e7d32; color: #fff; }
+  .phase-item .icon { font-size: 14px; }
+
+  /* 滚动条 */
+  .log-box::-webkit-scrollbar { width: 4px; }
+  .log-box::-webkit-scrollbar-track { background: #2d2d2d; }
+  .log-box::-webkit-scrollbar-thumb { background: #555; border-radius: 2px; }
+
+  /* 响应式 */
+  @media (max-width: 640px) {
+    body { padding: 12px; }
+    .mode-select { grid-template-columns: 1fr; }
+    .form-row { flex-direction: column; }
+    .env-checks { justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- 头部 -->
+  <div class="header">
+    <h1>📖 博主蒸馏器</h1>
+    <p>采集小红书博主数据 → 自动分析 → 生成创作指南</p>
+  </div>
+
+  <!-- 环境检查 -->
+  <div class="env-checks" id="envChecks">
+    <span class="env-check"><span class="dot yellow"></span> Python: 检查中...</span>
+    <span class="env-check"><span class="dot yellow"></span> Node.js: 检查中...</span>
+    <span class="env-check"><span class="dot yellow"></span> Spider_XHS: 检查中...</span>
+    <span class="env-check"><span class="dot yellow"></span> Cookie: 检查中...</span>
+  </div>
+
+  <!-- 阶段指示 -->
+  <div class="phase-bar" id="phaseBar">
+    <div class="phase-item active" data-phase="collect">
+      <span class="icon">①</span> 采集
+    </div>
+    <div class="phase-item" data-phase="analyze">
+      <span class="icon">②</span> 分析
+    </div>
+    <div class="phase-item" data-phase="deep">
+      <span class="icon">③</span> 深度蒸馏
+    </div>
+  </div>
+
+  <!-- Phase 1: 采集 -->
+  <div class="card" id="phaseCollect">
+    <h2><span class="step">1</span> 数据采集</h2>
+
+    <!-- 模式选择 -->
+    <div class="mode-select" id="modeSelect">
+      <div class="mode-option active" data-mode="url" onclick="setMode('url')">
+        <div class="title">🔗 拆解对标博主</div>
+        <div class="desc">输入博主主页 URL，采集 TA 的笔记</div>
+      </div>
+      <div class="mode-option" data-mode="self" onclick="setMode('self')">
+        <div class="title">🪞 诊断自己账号</div>
+        <div class="desc">采集当前登录账号的数据</div>
+      </div>
+    </div>
+
+    <div id="urlInputGroup" class="form-group">
+      <label for="bloggerUrl">博主主页 URL</label>
+      <input type="url" id="bloggerUrl" placeholder="https://www.xiaohongshu.com/user/profile/..." />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="maxNotes">采集数量</label>
+        <select id="maxNotes">
+          <option value="30">30 条 — 快速扫描（约 15-25 分钟）</option>
+          <option value="50" selected>50 条 — 推荐（约 30-45 分钟）</option>
+          <option value="80">80 条 — 深度（约 45-65 分钟）</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <button class="btn btn-primary" id="btnStart" onclick="startCrawl()" style="width:100%">
+          ▶ 开始采集
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase 2: 分析 -->
+  <div class="card" id="phaseAnalyze" style="opacity:.5; pointer-events:none">
+    <h2><span class="step">2</span> 数据分析</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">
+      对采集的笔记进行结构化分析：内容分类、互动统计、高频标签、TOP10 爆款识别
+    </p>
+    <button class="btn btn-secondary" id="btnAnalyze" onclick="startAnalysis()" disabled>
+      ▶ 开始分析
+    </button>
+  </div>
+
+  <!-- Phase 3: 深度蒸馏 -->
+  <div class="card" id="phaseDeep" style="opacity:.5; pointer-events:none">
+    <h2><span class="step">3</span> 深度蒸馏</h2>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">
+      生成数据底稿和 AI 蒸馏任务，由 AI 创作最终 HTML 报告和 Skill
+    </p>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label for="bloggerName">博主名称（用于产出物命名）</label>
+        <input type="text" id="bloggerName" placeholder="如：Gambit桌面社交空间" />
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>模式</label>
+        <select id="deepMode">
+          <option value="A">A — 拆解对标</option>
+          <option value="B">B — 诊断自己</option>
+        </select>
+      </div>
+      <div class="form-group" style="flex:1">
+        <label>&nbsp;</label>
+        <button class="btn btn-secondary" id="btnDeep" onclick="startDeep()" disabled style="width:100%">
+          ▶ 开始蒸馏
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 日志 -->
+  <div class="card">
+    <h2>📋 运行日志</h2>
+    <div class="progress-bar" id="progressBar">
+      <div class="fill" id="progressFill"></div>
+    </div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="card results" id="resultsPanel">
+    <h2>📦 产出物</h2>
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <!-- 已有文件 -->
+  <div class="card" id="existingFilesCard" style="display:none">
+    <h2>📂 历史文件</h2>
+    <div id="existingFiles"></div>
+  </div>
+</div>
+
+<script>
+// ── 全局状态 ──
+let currentMode = 'url';
+let currentTaskId = null;
+let eventSource = null;
+
+// ── 模式切换 ──
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-option').forEach(el => {
+    el.classList.toggle('active', el.dataset.mode === mode);
+  });
+  document.getElementById('urlInputGroup').style.display = (mode === 'url') ? 'block' : 'none';
+}
+
+// ── 环境检查 ──
+async function checkEnv() {
+  try {
+    const res = await fetch('/api/check-env');
+    const data = await res.json();
+    if (!data.ok) return;
+    const c = data.checks;
+    const set = (id, status, label) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const dot = el.querySelector('.dot');
+      dot.className = 'dot ' + status;
+      el.innerHTML = el.innerHTML.replace(/:[^]+/, ': ' + label);
+      el.querySelector('.dot').className = 'dot ' + status;
+    };
+    // 重建
+    document.getElementById('envChecks').innerHTML = `
+      <span class="env-check" id="ecPython"><span class="dot ${c.python ? 'green' : 'red'}"></span> Python: ${c.python || '未安装'}</span>
+      <span class="env-check" id="ecNode"><span class="dot ${c.nodejs !== 'NOT_FOUND' ? 'green' : 'red'}"></span> Node.js: ${c.nodejs !== 'NOT_FOUND' ? c.nodejs : '未安装'}</span>
+      <span class="env-check" id="ecSpider"><span class="dot ${c.spider_xhs !== 'NOT_FOUND' ? 'green' : 'red'}"></span> Spider_XHS: ${c.spider_xhs !== 'NOT_FOUND' ? '已就绪' : '未找到'}</span>
+      <span class="env-check" id="ecCookie"><span class="dot ${c.env_file !== 'NOT_FOUND' ? 'green' : 'red'}"></span> Cookie: ${c.env_file !== 'NOT_FOUND' ? '已配置' : '未配置'}</span>
+    `;
+  } catch (e) {
+    console.error('环境检查失败:', e);
+  }
+}
+
+// ── 日志 ──
+function log(msg, type = '') {
+  const box = document.getElementById('logBox');
+  box.classList.add('active');
+  const div = document.createElement('div');
+  div.className = 'log-line' + (type ? ' ' + type : '');
+  div.textContent = msg;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('logBox').innerHTML = '';
+  document.getElementById('logBox').classList.remove('active');
+  document.getElementById('progressBar').classList.remove('active');
+  document.getElementById('resultsPanel').classList.remove('active');
+}
+
+// ── 监听 SSE 日志流 ──
+function watchTask(taskId) {
+  if (eventSource) eventSource.close();
+
+  currentTaskId = taskId;
+  document.getElementById('progressBar').classList.add('active');
+  document.getElementById('progressFill').style.width = '10%';
+
+  eventSource = new EventSource(`/api/task/${taskId}/stream`);
+  eventSource.onmessage = (e) => {
+    if (e.data) {
+      const line = JSON.parse(e.data);
+      log(line);
+    }
+    // 进度指示
+    const fill = document.getElementById('progressFill');
+    const w = parseFloat(fill.style.width) || 10;
+    if (w < 60) fill.style.width = Math.min(w + 1, 60) + '%';
+  };
+  eventSource.addEventListener('done', () => {
+    eventSource.close();
+    eventSource = null;
+    document.getElementById('progressFill').style.width = '100%';
+    setTimeout(() => {
+      document.getElementById('progressBar').classList.remove('active');
+    }, 1000);
+    // 查询结果
+    pollTaskResult(taskId);
+  });
+  eventSource.onerror = () => {
+    // 连接断开后主动查询
+    eventSource.close();
+    eventSource = null;
+    document.getElementById('progressFill').style.width = '100%';
+    setTimeout(() => {
+      document.getElementById('progressBar').classList.remove('active');
+    }, 1000);
+    pollTaskResult(taskId);
+  };
+
+  // 也定期查询状态做后备
+  startStatusPoll(taskId);
+}
+
+let statusInterval = null;
+function startStatusPoll(taskId) {
+  if (statusInterval) clearInterval(statusInterval);
+  statusInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/task/${taskId}/status`);
+      const data = await res.json();
+      if (data.done) {
+        clearInterval(statusInterval);
+        statusInterval = null;
+      }
+    } catch (e) {}
+  }, 3000);
+}
+
+async function pollTaskResult(taskId) {
+  try {
+    const res = await fetch(`/api/task/${taskId}/status`);
+    const data = await res.json();
+    if (data.done) {
+      showResults(data.result_files || {});
+      unlockNextPhase();
+    }
+  } catch (e) {
+    log('⚠️ 查询结果失败: ' + e.message, 'error');
+  }
+}
+
+// ── 展示结果 ──
+function showResults(files) {
+  const panel = document.getElementById('resultsPanel');
+  const list = document.getElementById('fileList');
+  list.innerHTML = '';
+  panel.classList.add('active');
+
+  const entries = [
+    { key: 'details_json', label: '📊 笔记详情数据' },
+    { key: 'analysis_json', label: '📈 分析结果' },
+    { key: 'data_draft', label: '📝 数据底稿' },
+    { key: 'ai_task', label: '🤖 AI 蒸馏任务' },
+  ];
+
+  let hasAny = false;
+  for (const e of entries) {
+    if (files[e.key]) {
+      hasAny = true;
+      const div = document.createElement('div');
+      div.className = 'file-item';
+      div.innerHTML = `
+        <span>${e.label}</span>
+        <a href="/api/download?path=${encodeURIComponent(files[e.key])}" class="btn btn-sm btn-primary">下载</a>
+      `;
+      list.appendChild(div);
+    }
+  }
+
+  if (!hasAny) {
+    list.innerHTML = '<div class="file-item"><span>暂无产出物（脚本可能还在运行，或发生了错误）</span></div>';
+  }
+}
+
+// ── 解锁下一阶段 ──
+function unlockNextPhase() {
+  const phs = document.getElementById('phaseBar');
+  const items = phs.querySelectorAll('.phase-item');
+
+  // 找到当前 active 的，将下一个设为可用
+  for (let i = 0; i < items.length - 1; i++) {
+    if (items[i].classList.contains('active') || items[i].classList.contains('done')) {
+      items[i].classList.remove('active');
+      items[i].classList.add('done');
+      // 解锁下一个
+      const next = items[i + 1];
+      next.classList.add('active');
+
+      const cardMap = { collect: 'phaseCollect', analyze: 'phaseAnalyze', deep: 'phaseDeep' };
+      const card = document.getElementById(cardMap[next.dataset.phase]);
+      if (card) {
+        card.style.opacity = '1';
+        card.style.pointerEvents = 'auto';
+        const btn = card.querySelector('button[disabled]');
+        if (btn) btn.disabled = false;
+      }
+      // 如果是 analyze 阶段，自动启用按钮
+      if (next.dataset.phase === 'analyze') {
+        document.getElementById('btnAnalyze').disabled = false;
+        document.getElementById('btnAnalyze').className = 'btn btn-primary';
+      }
+      if (next.dataset.phase === 'deep') {
+        document.getElementById('btnDeep').disabled = false;
+        document.getElementById('btnDeep').className = 'btn btn-primary';
+      }
+      break;
+    }
+  }
+}
+
+// ── 采集 ──
+async function startCrawl() {
+  clearLog();
+
+  const maxNotes = document.getElementById('maxNotes').value;
+  const btn = document.getElementById('btnStart');
+  btn.disabled = true;
+  btn.textContent = '⏳ 采集中...';
+
+  let body;
+  if (currentMode === 'self') {
+    body = { mode: 'self', max_notes: parseInt(maxNotes) };
+  } else {
+    const url = document.getElementById('bloggerUrl').value.trim();
+    if (!url) {
+      log('⚠️ 请输入博主主页 URL', 'error');
+      btn.disabled = false;
+      btn.textContent = '▶ 开始采集';
+      return;
+    }
+    body = { mode: 'url', url, max_notes: parseInt(maxNotes) };
+  }
+
+  try {
+    const res = await fetch('/api/start-crawl', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      log('❌ ' + (data.error || '启动失败'), 'error');
+      btn.disabled = false;
+      btn.textContent = '▶ 开始采集';
+      return;
+    }
+    log('🚀 采集任务已启动...');
+    watchTask(data.task_id);
+  } catch (e) {
+    log('❌ 请求失败: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '▶ 开始采集';
+  }
+}
+
+// ── 分析 ──
+async function startAnalysis() {
+  clearLog();
+
+  const btn = document.getElementById('btnAnalyze');
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+
+  try {
+    const res = await fetch('/api/run-analysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const data = await res.json();
+    if (!data.ok) {
+      log('❌ ' + (data.error || '启动失败'), 'error');
+      btn.disabled = false;
+      btn.textContent = '▶ 开始分析';
+      return;
+    }
+    log('📊 分析任务已启动...');
+    watchTask(data.task_id);
+  } catch (e) {
+    log('❌ ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '▶ 开始分析';
+  }
+}
+
+// ── 深度蒸馏 ──
+async function startDeep() {
+  clearLog();
+
+  const bloggerName = document.getElementById('bloggerName').value.trim();
+  if (!bloggerName) {
+    log('⚠️ 请输入博主名称', 'error');
+    return;
+  }
+
+  const mode = document.getElementById('deepMode').value;
+  const btn = document.getElementById('btnDeep');
+  btn.disabled = true;
+  btn.textContent = '⏳ 蒸馏中...';
+
+  try {
+    const res = await fetch('/api/run-deep', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ blogger_name: bloggerName, mode }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      log('❌ ' + (data.error || '启动失败'), 'error');
+      btn.disabled = false;
+      btn.textContent = '▶ 开始蒸馏';
+      return;
+    }
+    log('🧠 深度蒸馏已启动...');
+    watchTask(data.task_id);
+  } catch (e) {
+    log('❌ ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = '▶ 开始蒸馏';
+  }
+}
+
+// ── 加载历史文件 ──
+async function loadExistingFiles() {
+  try {
+    const res = await fetch('/api/find-results');
+    const data = await res.json();
+    const all = [
+      ...data.details_files,
+      ...data.analysis_files,
+      ...data.data_drafts,
+      ...data.ai_tasks,
+    ];
+    if (all.length === 0) return;
+
+    document.getElementById('existingFilesCard').style.display = 'block';
+    const container = document.getElementById('existingFiles');
+    container.innerHTML = '';
+    for (const f of all) {
+      const name = f.split(/[/\\]/).pop();
+      const div = document.createElement('div');
+      div.className = 'file-item';
+      div.innerHTML = `
+        <span>📄 ${name}</span>
+        <a href="/api/download?path=${encodeURIComponent(f)}" class="btn btn-sm btn-secondary">下载</a>
+      `;
+      container.appendChild(div);
+    }
+  } catch (e) {}
+}
+
+// ── 初始化 ──
+checkEnv();
+loadExistingFiles();
+</script>
+</body>
+</html>
