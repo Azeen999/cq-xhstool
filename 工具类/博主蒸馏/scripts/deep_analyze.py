@@ -2014,22 +2014,26 @@ def deep_analyze(analysis_path, nickname, output_dir, notes_details_path=None, m
     # ---- 创建三个输出文件夹 ----
     safe_name = safe_filename(nickname)
     
+    # 以博主名为顶层文件夹，所有产出放其下
+    blogger_root = os.path.join(output_dir, safe_name)
+    os.makedirs(blogger_root, exist_ok=True)
+    
     # 1. {博主名}_笔记/ — 笔记拆解内容
-    notes_dir = os.path.join(output_dir, f"{safe_name}_笔记")
+    notes_dir = os.path.join(blogger_root, f"{safe_name}_笔记")
     os.makedirs(notes_dir, exist_ok=True)
     
     # 2. {博主名}_蒸馏报告/ — HTML报告
-    report_dir = os.path.join(output_dir, f"{safe_name}_蒸馏报告")
+    report_dir = os.path.join(blogger_root, f"{safe_name}_蒸馏报告")
     os.makedirs(report_dir, exist_ok=True)
     
     # 3. {博主名}_创作指南.skill/ 或 {博主名}_创作基因.skill/ — SKILL文件夹
     if mode == "B":
-        skill_dir = os.path.join(output_dir, f"{safe_name}_创作基因.skill")
+        skill_dir = os.path.join(blogger_root, f"{safe_name}_创作基因.skill")
     else:
-        skill_dir = os.path.join(output_dir, f"{safe_name}_创作指南.skill")
+        skill_dir = os.path.join(blogger_root, f"{safe_name}_创作指南.skill")
     os.makedirs(skill_dir, exist_ok=True)
     
-    # 4. 过程文件目录
+    # 4. 过程文件目录（依旧放在 output_dir 顶层）
     process_dir = os.path.join(output_dir, "_过程文件", "原始素材")
     os.makedirs(process_dir, exist_ok=True)
     

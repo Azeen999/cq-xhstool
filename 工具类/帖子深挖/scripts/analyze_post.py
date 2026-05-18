@@ -47,9 +47,9 @@ def load_cookies_from_env():
         with open(env_path, "r", encoding="utf-8") as f:
             content = f.read()
             # 提取 COOKIES= 后面的内容（可能有引号也可能没有）
-            match = re.search(r"COOKIES\s*=\s*['\"]?(.*?)['\"]?\s*(?:#|$)", content)
+            match = re.search(r'^COOKIES\s*=\s*(.+)$', content, re.MULTILINE)
             if match:
-                return match.group(1)
+                return match.group(1).strip().strip("'\"").strip()
     return None
 
 

@@ -53,5 +53,6 @@ Thumbs.db
 !素材库/README.md
 工具类/博主蒸馏/references/**/*.skill/
 
-# === 分析结果 ===
+# === 博主风格/分析结果（自动生成） ===
+素材库/博主风格/
 *_analysis.json

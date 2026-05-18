@@ -138,15 +138,50 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
 .md-content h1 { font-size: 18px; font-weight: 700; margin: 16px 0 8px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f5; }
 .md-content h2 { font-size: 16px; font-weight: 700; margin: 14px 0 6px; }
 .md-content h3 { font-size: 14px; font-weight: 600; margin: 12px 0 4px; }
-.md-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; }
-.md-content th, .md-content td { border: 1px solid #e8e8ed; padding: 6px 10px; text-align: left; }
-.md-content th { background: #f5f5fa; font-weight: 600; }
+.md-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 12px; table-layout: fixed; word-break: break-word; }
+.md-content th, .md-content td { border: 1px solid #e8e8ed; padding: 6px 10px; text-align: left; vertical-align: top; }
+.md-content th { background: #f5f5fa; font-weight: 600; white-space: nowrap; }
+.md-content table.md-table { width: 100%; }
 .md-content code { background: #f5f5fa; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
 .md-content blockquote { border-left: 3px solid #ff6b6b; padding-left: 12px; color: #666; margin: 8px 0; }
 .md-content ul, .md-content ol { padding-left: 20px; margin: 6px 0; }
 .md-content li { margin: 2px 0; }
 .md-content strong { color: #ff6b6b; }
 .md-content hr { border: none; border-top: 1px solid #e8e8ed; margin: 12px 0; }
+.md-content .md-blank { height: 8px; }
+.md-content p { margin: 4px 0; }
+
+/* ── Self Params View ── */
+.ms-view { display: flex; gap: 0; height: calc(100vh - 120px); background: #fff; border-radius: 12px; overflow: hidden; }
+.ms-tree-pane { width: 240px; border-right: 1px solid #f0f0f5; display: flex; flex-direction: column; flex-shrink: 0; }
+.ms-tree-header { padding: 14px 16px; font-size: 14px; font-weight: 600; border-bottom: 1px solid #f0f0f5; }
+.ms-tree-list { flex: 1; overflow-y: auto; padding: 8px; }
+.ms-tree-item { padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 2px; display: flex; align-items: center; gap: 6px; transition: all .15s; }
+.ms-tree-item:hover { background: #f5f5fa; }
+.ms-tree-item.active { background: #fff0f0; color: #ff6b6b; font-weight: 500; }
+.ms-tree-item .ms-icon { flex-shrink: 0; font-size: 14px; }
+.ms-tree-item .ms-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ms-tree-dir { padding: 8px 10px; font-size: 12px; font-weight: 600; color: #999; margin-top: 8px; }
+.ms-content-pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.ms-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; font-size: 13px; }
+.ms-file-header { padding: 12px 20px; border-bottom: 1px solid #f0f0f5; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+.ms-file-name { font-size: 13px; font-weight: 500; color: #333; }
+.ms-file-actions { display: flex; gap: 8px; }
+.ms-btn { font-size: 12px; padding: 4px 12px; border-radius: 6px; border: 1px solid #e8e8ed; background: #fff; cursor: pointer; color: #666; transition: all .15s; }
+.ms-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
+.ms-btn.primary { background: #ff6b6b; color: #fff; border-color: #ff6b6b; }
+.ms-btn.primary:hover { background: #ff5252; }
+.ms-btn:disabled { opacity: .5; cursor: not-allowed; }
+.ms-file-body { flex: 1; overflow-y: auto; padding: 20px; }
+.ms-file-body .md-content { font-size: 13px; line-height: 1.8; }
+.ms-editor { width: 100%; height: 100%; border: none; outline: none; resize: none; font-family: 'SF Mono', Menlo, Consolas, monospace; font-size: 13px; line-height: 1.7; padding: 0; color: #333; background: transparent; }
+.ms-badge { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: #fff0f0; color: #ff6b6b; margin-left: 6px; font-weight: 500; }
+.ms-badge.saved { background: #f0fff4; color: #30d158; }
+
+@media (max-width: 768px) {
+  .ms-view { flex-direction: column; }
+  .ms-tree-pane { width: 100%; max-height: 180px; border-right: none; border-bottom: 1px solid #f0f0f5; }
+}
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .stat-item { background: #f9f9fb; border-radius: 10px; padding: 12px; text-align: center; }
 .stat-item .si-val { font-size: 22px; font-weight: 700; color: #ff6b6b; }
@@ -479,14 +514,19 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
 
     <!-- ════ 素材库 - 自我参数 ════ -->
     <div class="tab-content" id="tab-material-self">
-      <div class="card">
-        <h3>自我参数</h3>
-        <p>自己的写作风格、目标内容、主营项目等账号参数</p>
-      </div>
-      <div class="lib-pane">
-        <div class="lib-tree" id="lib-tree-self">加载中...</div>
-        <div class="lib-preview" id="lib-preview-self">
-          <p style="color:#999;font-size:13px">选择一个文件查看内容</p>
+      <div class="ms-view">
+        <div class="ms-tree-pane">
+          <div class="ms-tree-header">📂 自我参数</div>
+          <div class="ms-tree-list" id="ms-tree-list">
+            <div style="color:#999;font-size:12px;text-align:center;padding:20px">加载中...</div>
+          </div>
+        </div>
+        <div class="ms-content-pane" id="ms-content-pane">
+          <div class="ms-empty">
+            <div style="font-size:36px;margin-bottom:8px">📋</div>
+            <div>选择左侧文件查看内容</div>
+            <div style="font-size:12px;color:#bbb;margin-top:4px">自我参数文件支持在线编辑</div>
+          </div>
         </div>
       </div>
     </div>
@@ -563,15 +603,15 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
     <div class="modal-body">
       <div style="font-size:13px;line-height:1.6">
         <p style="margin-bottom:12px;color:#666">
-          配置 LLM API Key 用于文案改写。支持 OpenAI 兼容接口。
+          配置 LLM API Key 用于文案改写。默认使用 DeepSeek，也支持其他 OpenAI 兼容接口。
         </p>
         <div style="margin-bottom:12px">
           <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">API Key</label>
           <input type="password" id="llm-key-input" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px;font-family:SF Mono,Menlo,monospace" placeholder="sk-...">
         </div>
         <div style="margin-bottom:12px">
-          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">API Base URL（可选，默认使用 MiniMax）</label>
-          <input type="text" id="llm-base-input" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px" placeholder="https://api.minimaxi.com/v1">
+          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">API Base URL（可选，默认使用 DeepSeek）</label>
+          <input type="text" id="llm-base-input" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px" placeholder="https://api.deepseek.com/v1">
         </div>
         <div style="display:flex;gap:8px;justify-content:flex-end">
           <button class="btn btn-outline" onclick="closeLlmModal()">取消</button>
@@ -807,8 +847,10 @@ function connectSSE(taskId, logElId, dlElId, onDone, onPhase, onPhaseDone, isPip
       if (selfLabelEl) selfLabelEl.textContent = '❌ 任务失败，请查看日志排查问题';
       const btn1 = document.getElementById('btn-one-click');
       const btn2 = document.getElementById('btn-self-one-click');
+      const btnPd = document.getElementById('btn-pd');
       if (btn1 && btn1.disabled) { btn1.disabled = false; btn1.textContent = '🚀 一键分析'; }
       if (btn2 && btn2.disabled) { btn2.disabled = false; btn2.textContent = '🧬 一键诊断'; }
+      if (btnPd && btnPd.disabled) { btnPd.disabled = false; btnPd.textContent = '🔍 开始深挖'; }
       const dlEl = document.getElementById(dlElId);
       dlEl.innerHTML = '';
       for (const [key, path] of Object.entries(doneData.result_files || {})) {
@@ -929,6 +971,7 @@ async function startOneClick() {
         updateProgress(100, '🎉 全部完成！');
         btn.disabled = false;
         btn.textContent = '🚀 一键分析';
+        _bloggersCache = null;
         showPipelineResult(statusData);
       },
       (phaseNum) => {
@@ -1110,8 +1153,11 @@ function showSelfPipelineResult(statusData) {
   </div>
   <div style="margin-top:12px;padding:12px;background:#f5f5f7;border-radius:8px;font-size:13px;color:#666">
     ${fileLinks}
-  </div>`;
+  </div>
+  <div style="margin-top:8px;font-size:12px;color:#999">💡 诊断结果已保存到「自我参数」，可前往查看和编辑</div>`;
   card.style.display = '';
+  _msCurrentFile = null;
+  loadMaterialSelf();
 }
 
 // ══════════════════════════════════════════
@@ -1401,40 +1447,95 @@ checkLlmStatus();
 
 let _bloggersCache = null;
 let _selectedBlogger = null;
+let _bloggerSort = 'time';
+
+function _sortBloggers() {
+  if (!_bloggersCache) return;
+  const list = _bloggersCache;
+  if (_bloggerSort === 'notes') {
+    list.sort((a, b) => (b.notes_count || 0) - (a.notes_count || 0));
+  } else if (_bloggerSort === 'likes') {
+    list.sort((a, b) => (b.avg_likes || 0) - (a.avg_likes || 0));
+  } else if (_bloggerSort === 'total_likes') {
+    list.sort((a, b) => (b.total_likes || 0) - (a.total_likes || 0));
+  }
+  // 'time' = default order from API (by file mtime)
+}
+
+function setBloggerSort(sortKey) {
+  if (_bloggerSort === sortKey) return;
+  _bloggerSort = sortKey;
+  _sortBloggers();
+  renderBloggerList();
+}
+
+function renderBloggerList() {
+  const listEl = document.getElementById('blogger-list');
+  listEl.innerHTML = '';
+  if (!_bloggersCache || !_bloggersCache.length) {
+    listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px">暂无已分析的博主<br>运行博主分析后，产出会出现在这里</div>';
+    return;
+  }
+
+  // 排序栏
+  const sortBar = document.createElement('div');
+  sortBar.style.cssText = 'display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap';
+  const sorts = [
+    { key: 'time', label: '🕐 最近' },
+    { key: 'notes', label: '📝 笔记数' },
+    { key: 'likes', label: '❤️ 均赞' },
+    { key: 'total_likes', label: '🔥 总赞' },
+  ];
+  for (const s of sorts) {
+    const btn = document.createElement('button');
+    btn.textContent = s.label;
+    const active = _bloggerSort === s.key;
+    btn.style.cssText = `font-size:11px;padding:3px 8px;border-radius:8px;border:1px solid ${active ? '#ff6b6b' : '#ddd'};background:${active ? '#fff5f5' : '#fff'};color:${active ? '#ff6b6b' : '#666'};cursor:pointer`;
+    btn.onclick = () => setBloggerSort(s.key);
+    sortBar.appendChild(btn);
+  }
+  listEl.appendChild(sortBar);
+
+  for (const b of _bloggersCache) {
+    const card = document.createElement('div');
+    card.className = 'blogger-card';
+    card.dataset.name = b.name;
+    const initial = b.name.charAt(0);
+    card.innerHTML = `
+      <div class="bc-name">
+        <div class="bc-avatar">${initial}</div>
+        <div style="flex:1;min-width:0">
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(b.name)}</div>
+          <div class="bc-stats">
+            <span>📝${b.notes_count}篇</span>
+            <span>❤️均赞${b.avg_likes}</span>
+          </div>
+        </div>
+      </div>`;
+    card.onclick = () => selectBlogger(b.name);
+    listEl.appendChild(card);
+  }
+  // 恢复之前选中的博主高亮
+  if (_selectedBlogger) {
+    const active = listEl.querySelector(`[data-name="${CSS.escape(_selectedBlogger)}"]`);
+    if (active) active.classList.add('active');
+  }
+}
 
 async function loadMaterialBlogger() {
-  if (_bloggersCache !== null) return;
   const listEl = document.getElementById('blogger-list');
+  if (_bloggersCache !== null) {
+    renderBloggerList();
+    return;
+  }
   listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#999">加载中...</div>';
   try {
     const r = await fetch('/api/bloggers');
     const data = await r.json();
     if (!data.ok) throw new Error(data.error);
     _bloggersCache = data.bloggers;
-    listEl.innerHTML = '';
-    if (!_bloggersCache.length) {
-      listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#999;font-size:13px">暂无已分析的博主<br>运行博主分析后，产出会出现在这里</div>';
-      return;
-    }
-    for (const b of _bloggersCache) {
-      const card = document.createElement('div');
-      card.className = 'blogger-card';
-      card.dataset.name = b.name;
-      const initial = b.name.charAt(0);
-      card.innerHTML = `
-        <div class="bc-name">
-          <div class="bc-avatar">${initial}</div>
-          <div style="flex:1;min-width:0">
-            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(b.name)}</div>
-            <div class="bc-stats">
-              <span>📝${b.notes_count}篇</span>
-              <span>❤️均赞${b.avg_likes}</span>
-            </div>
-          </div>
-        </div>`;
-      card.onclick = () => selectBlogger(b.name);
-      listEl.appendChild(card);
-    }
+    _sortBloggers();
+    renderBloggerList();
   } catch {
     listEl.innerHTML = '<div style="padding:20px;text-align:center;color:#ff453a;font-size:13px">加载失败</div>';
   }
@@ -1463,6 +1564,13 @@ function renderBloggerDetail(b, el) {
   const hasData = !!b.files.data_draft;
   const hasTopic = !!b.files.topic_library;
   const hasAnalysis = !!b.files.structured_analysis;
+  const hasDistillReport = !!b.files.distill_report;
+  const hasDistillHtml = !!b.files.distill_report_html;
+  const hasPostAnalysis = !!b.files.post_analysis;
+  const hasDiagnosis = !!b.files.diagnosis;
+
+  const extraReports = Object.entries(b.files).filter(([k, v]) => k.startsWith('report_') && v);
+  const hasExtra = extraReports.length > 0;
 
   let tabsHtml = '';
   if (hasPosts) tabsHtml += '<div class="detail-tab active" data-tab="posts">📝 帖子</div>';
@@ -1471,6 +1579,14 @@ function renderBloggerDetail(b, el) {
   if (hasFormula) tabsHtml += '<div class="detail-tab" data-tab="formula">📐 内容公式</div>';
   if (hasTopic) tabsHtml += '<div class="detail-tab" data-tab="topic">💡 选题库</div>';
   if (hasAnalysis) tabsHtml += '<div class="detail-tab" data-tab="analysis">📋 结构化分析</div>';
+  if (hasDistillReport) tabsHtml += '<div class="detail-tab" data-tab="distill">🧪 蒸馏报告</div>';
+  if (!hasDistillReport && hasDistillHtml) tabsHtml += '<div class="detail-tab" data-tab="distill">🧪 蒸馏报告</div>';
+  if (hasPostAnalysis) tabsHtml += '<div class="detail-tab" data-tab="postanalysis">🔍 帖子分析</div>';
+  if (hasDiagnosis) tabsHtml += '<div class="detail-tab" data-tab="diagnosis">🩺 诊断报告</div>';
+  for (const [key, _] of extraReports) {
+    const label = key.replace('report_', '');
+    tabsHtml += `<div class="detail-tab" data-tab="${key}">📄 ${escapeHtml(label.substring(0,6))}</div>`;
+  }
 
   let catBars = '';
   const cats = b.category_stats || {};
@@ -1528,12 +1644,16 @@ function renderBloggerDetail(b, el) {
         <div class="stat-item"><div class="si-val">${b.total_collects}</div><div class="si-label">总收藏</div></div>
         <div class="stat-item"><div class="si-val">${b.total_comments}</div><div class="si-label">总评论</div></div>
       </div>
-      <div id="data-md-content" class="md-content">加载中...</div>
+      <div id="data-md-content" class="md-content">${hasData ? '加载中...' : '<div style="color:#999;font-size:13px;text-align:center;padding:20px">暂无详细数据报告</div>'}</div>
     </div>
     ${hasStyle ? '<div class="detail-panel" id="panel-style"><div class="md-content" id="style-md-content">加载中...</div></div>' : ''}
     ${hasFormula ? '<div class="detail-panel" id="panel-formula"><div class="md-content" id="formula-md-content">加载中...</div></div>' : ''}
     ${hasTopic ? '<div class="detail-panel" id="panel-topic"><div class="md-content" id="topic-md-content">加载中...</div></div>' : ''}
     ${hasAnalysis ? '<div class="detail-panel" id="panel-analysis"><div class="md-content" id="analysis-md-content">加载中...</div></div>' : ''}
+    ${hasDistillReport ? '<div class="detail-panel" id="panel-distill"><div class="md-content" id="distill-md-content">加载中...</div></div>' : (hasDistillHtml ? '<div class="detail-panel" id="panel-distill"><iframe id="distill-iframe" style="width:100%;height:calc(100vh - 280px);border:none;border-radius:8px;"></iframe></div>' : '')}
+    ${hasPostAnalysis ? '<div class="detail-panel" id="panel-postanalysis"><div class="md-content" id="postanalysis-md-content">加载中...</div></div>' : ''}
+    ${hasDiagnosis ? '<div class="detail-panel" id="panel-diagnosis"><div class="md-content" id="diagnosis-md-content">加载中...</div></div>' : ''}
+    ${extraReports.map(([key]) => `<div class="detail-panel" id="panel-${key}"><div class="md-content" id="md-${key}">加载中...</div></div>`).join('')}
   `;
 
   el.querySelectorAll('.detail-tab').forEach(tab => {
@@ -1552,6 +1672,16 @@ function renderBloggerDetail(b, el) {
   if (hasFormula) loadMdContent('formula-md-content', b.files.formula_summary);
   if (hasTopic) loadMdContent('topic-md-content', b.files.topic_library);
   if (hasAnalysis) loadMdContent('analysis-md-content', b.files.structured_analysis);
+  if (hasDistillReport) loadMdContent('distill-md-content', b.files.distill_report);
+  else if (hasDistillHtml) {
+    const iframe = document.getElementById('distill-iframe');
+    if (iframe) iframe.src = '/api/blogger-html?path=' + encodeURIComponent(b.files.distill_report_html);
+  }
+  if (hasPostAnalysis) loadMdContent('postanalysis-md-content', b.files.post_analysis);
+  if (hasDiagnosis) loadMdContent('diagnosis-md-content', b.files.diagnosis);
+  for (const [key, path] of extraReports) {
+    loadMdContent('md-' + key, path);
+  }
 }
 
 function togglePostContent(card) {
@@ -1581,107 +1711,308 @@ function loadTabContent(tab, blogger) {
     'formula': 'formula-md-content',
     'topic': 'topic-md-content',
     'analysis': 'analysis-md-content',
+    'distill': 'distill-md-content',
+    'postanalysis': 'postanalysis-md-content',
+    'diagnosis': 'diagnosis-md-content',
   };
-  const elId = mapping[tab];
-  if (!elId) return;
-  const el = document.getElementById(elId);
-  if (!el || el.dataset.loaded) return;
   const fileMapping = {
     'data': blogger.files.data_draft,
     'style': blogger.files.deep_breakdown,
     'formula': blogger.files.formula_summary,
     'topic': blogger.files.topic_library,
     'analysis': blogger.files.structured_analysis,
+    'distill': blogger.files.distill_report,
+    'postanalysis': blogger.files.post_analysis,
+    'diagnosis': blogger.files.diagnosis,
   };
-  const filePath = fileMapping[tab];
+  let elId = mapping[tab];
+  let filePath = fileMapping[tab];
+  if (!elId && tab.startsWith('report_')) {
+    elId = 'md-' + tab;
+    filePath = blogger.files[tab];
+  }
+  if (!elId) return;
+  if (tab === 'distill' && !filePath && blogger.files.distill_report_html) {
+    const iframe = document.getElementById('distill-iframe');
+    if (iframe && !iframe.src) iframe.src = '/api/blogger-html?path=' + encodeURIComponent(blogger.files.distill_report_html);
+    return;
+  }
+  const el = document.getElementById(elId);
+  if (!el || el.dataset.loaded) return;
   if (filePath) loadMdContent(elId, filePath);
 }
 
 function renderMarkdown(text) {
   if (!text) return '';
-  let html = escapeHtml(text);
-  html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-  html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-  html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-  html = html.replace(/^---+$/gm, '<hr>');
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-  html = html.replace(/^[-*] (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
-  html = html.replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>');
-  html = html.replace(/\|(.+)\|/g, (match) => {
-    const cells = match.split('|').filter(c => c.trim());
-    if (cells.every(c => /^[-:\s]+$/.test(c.trim()))) return '';
-    const tds = cells.map(c => `<td>${c.trim()}</td>`).join('');
-    return `<tr>${tds}</tr>`;
-  });
-  html = html.replace(/(<tr>.*<\/tr>\n?)+/g, '<table>$&</table>');
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  html = html.replace(/\n{2,}/g, '<br><br>');
-  html = html.replace(/\n/g, '<br>');
+  const lines = text.split('\n');
+  let html = '';
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    if (/^\|.*\|$/.test(line.trim())) {
+      let tableLines = [];
+      while (i < lines.length && /^\|.*\|$/.test(lines[i].trim())) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      html += _renderMdTable(tableLines);
+      continue;
+    }
+    if (line.trim().startsWith('```')) {
+      const lang = line.trim().replace('```', '').trim();
+      let codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++;
+      html += `<pre><code class="lang-${escapeHtml(lang)}">${escapeHtml(codeLines.join('\n'))}</code></pre>`;
+      continue;
+    }
+    if (/^> /.test(line.trim())) {
+      let items = [];
+      while (i < lines.length && /^> /.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^> /, ''));
+        i++;
+      }
+      html += '<blockquote>' + items.map(it => '<p>' + _renderInline(it) + '</p>').join('') + '</blockquote>';
+      continue;
+    }
+    if (/^[-*] /.test(line.trim())) {
+      let items = [];
+      while (i < lines.length && /^[-*] /.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^[-*] /, ''));
+        i++;
+      }
+      html += '<ul>' + items.map(it => '<li>' + _renderInline(it) + '</li>').join('') + '</ul>';
+      continue;
+    }
+    if (/^\d+\. /.test(line.trim())) {
+      let items = [];
+      while (i < lines.length && /^\d+\. /.test(lines[i].trim())) {
+        items.push(lines[i].trim().replace(/^\d+\. /, ''));
+        i++;
+      }
+      html += '<ol>' + items.map(it => '<li>' + _renderInline(it) + '</li>').join('') + '</ol>';
+      continue;
+    }
+    if (!line.trim()) {
+      html += '<div class="md-blank"></div>';
+      i++;
+      continue;
+    }
+    html += _renderMdLine(line);
+    i++;
+  }
   return html;
 }
 
+function _renderMdTable(tableLines) {
+  if (tableLines.length < 2) {
+    return tableLines.map(l => escapeHtml(l)).join('<br>');
+  }
+  const parseRow = (line) => {
+    return line.replace(/^\|/, '').replace(/\|$/, '').split('|').map(c => c.trim());
+  };
+  const headerCells = parseRow(tableLines[0]);
+  let hasSeparator = false;
+  let dataStart = 1;
+  if (tableLines.length > 1 && /^[\s|:\-]+$/.test(tableLines[1].replace(/[^\|\s:\-]/g, ''))) {
+    const sepCells = parseRow(tableLines[1]);
+    if (sepCells.every(c => /^[-:]+$/.test(c))) {
+      hasSeparator = true;
+      dataStart = 2;
+    }
+  }
+  let thHtml = '<thead><tr>' + headerCells.map(c => `<th>${escapeHtml(c)}</th>`).join('') + '</tr></thead>';
+  let tbHtml = '';
+  for (let j = dataStart; j < tableLines.length; j++) {
+    const cells = parseRow(tableLines[j]);
+    tbHtml += '<tr>' + cells.map(c => `<td>${escapeHtml(c)}</td>`).join('') + '</tr>';
+  }
+  if (tbHtml) tbHtml = '<tbody>' + tbHtml + '</tbody>';
+  return `<table class="md-table">${thHtml}${tbHtml}</table>`;
+}
+
+function _renderMdLine(line) {
+  const trimmed = line.trim();
+  if (/^### (.+)$/.test(trimmed)) return '<h3>' + escapeHtml(trimmed.replace(/^### /, '')) + '</h3>';
+  if (/^## (.+)$/.test(trimmed)) return '<h2>' + escapeHtml(trimmed.replace(/^## /, '')) + '</h2>';
+  if (/^# (.+)$/.test(trimmed)) return '<h1>' + escapeHtml(trimmed.replace(/^# /, '')) + '</h1>';
+  if (/^---+$/.test(trimmed)) return '<hr>';
+  return '<p>' + _renderInline(trimmed) + '</p>';
+}
+
+function _renderInline(text) {
+  let html = escapeHtml(text);
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  return html;
+}
+
+let _msCurrentFile = null;
+let _msEditMode = false;
+let _msOriginalContent = '';
+
 async function loadMaterialSelf() {
-  const treeEl = document.getElementById('lib-tree-self');
-  const previewEl = document.getElementById('lib-preview-self');
-  treeEl.textContent = '加载中...';
+  const listEl = document.getElementById('ms-tree-list');
+  listEl.innerHTML = '<div style="color:#999;font-size:12px;text-align:center;padding:20px">加载中...</div>';
   try {
     const r = await fetch('/api/material-lib/tree');
     const data = await r.json();
     if (!data.ok) throw new Error(data.error);
     const section = (data.sections || {})['自我参数'] || { tree: [], root: '' };
-    treeEl.innerHTML = '';
-    renderMaterialTree(section.tree || [], treeEl, section.root, previewEl);
+    listEl.innerHTML = '';
     if (!section.tree || section.tree.length === 0) {
-      treeEl.innerHTML = '<p style="color:#999;font-size:13px;text-align:center;padding:30px">暂无自我参数文件。可在 <code>素材库/自我参数/</code> 目录下手动添加。</p>';
+      listEl.innerHTML = '<div style="color:#999;font-size:12px;text-align:center;padding:30px">暂无自我参数<br><span style="font-size:11px">先运行「自我诊断」生成</span></div>';
+      return;
     }
+    _renderMsTree(section.tree, listEl, section.root, 0);
   } catch {
-    treeEl.innerHTML = '<p style="color:#ff453a;font-size:13px">加载失败</p>';
+    listEl.innerHTML = '<div style="color:#ff453a;font-size:12px;text-align:center;padding:20px">加载失败</div>';
   }
 }
 
-function renderMaterialTree(items, parentEl, rootPath, previewEl, depth = 0) {
+function _renderMsTree(items, parentEl, rootPath, depth) {
   for (const item of items) {
-    const div = document.createElement('div');
-    div.className = 'tree-item';
-    div.style.paddingLeft = (8 + depth * 16) + 'px';
-
     if (item.type === 'dir') {
-      div.innerHTML = '<span class="icon">📁</span> ' + item.name;
-      div.onclick = () => {
-        const next = div.nextElementSibling;
-        if (next && next.classList.contains('tree-children')) {
+      const dirEl = document.createElement('div');
+      dirEl.className = 'ms-tree-dir';
+      dirEl.style.paddingLeft = (8 + depth * 12) + 'px';
+      dirEl.textContent = '📁 ' + item.name;
+      dirEl.onclick = () => {
+        const next = dirEl.nextElementSibling;
+        if (next && next.classList.contains('ms-tree-children')) {
           next.style.display = next.style.display === 'none' ? '' : 'none';
         }
       };
-      parentEl.appendChild(div);
+      parentEl.appendChild(dirEl);
       const childrenDiv = document.createElement('div');
-      childrenDiv.className = 'tree-children';
-      renderMaterialTree(item.children, childrenDiv, rootPath, previewEl, depth + 1);
+      childrenDiv.className = 'ms-tree-children';
+      childrenDiv.style.display = 'none';
+      _renderMsTree(item.children, childrenDiv, rootPath, depth + 1);
       parentEl.appendChild(childrenDiv);
     } else {
-      div.innerHTML = '<span class="icon">📄</span> ' + item.name;
-      div.onclick = () => loadMaterialFile(item.path, previewEl);
-      parentEl.appendChild(div);
+      const itemEl = document.createElement('div');
+      itemEl.className = 'ms-tree-item';
+      itemEl.style.paddingLeft = (8 + depth * 12) + 'px';
+      const isSkill = item.name === 'SKILL.md';
+      const icon = isSkill ? '🧬' : (item.name.endsWith('.md') ? '📝' : '📄');
+      itemEl.innerHTML = `<span class="ms-icon">${icon}</span><span class="ms-label" title="${escapeHtml(item.name)}">${escapeHtml(item.name.replace('.md',''))}</span>`;
+      itemEl.dataset.path = item.path;
+      itemEl.onclick = () => {
+        document.querySelectorAll('.ms-tree-item').forEach(i => i.classList.remove('active'));
+        itemEl.classList.add('active');
+        _loadMsFile(item.path);
+      };
+      parentEl.appendChild(itemEl);
     }
   }
 }
 
-async function loadMaterialFile(path, previewEl) {
-  previewEl.innerHTML = '<p style="color:#999">加载中...</p>';
+async function _loadMsFile(path) {
+  _msEditMode = false;
+  _msCurrentFile = path;
+  const pane = document.getElementById('ms-content-pane');
+  pane.innerHTML = '<div class="ms-empty"><div style="font-size:24px;margin-bottom:8px">⏳</div>加载中...</div>';
   try {
     const r = await fetch(`/api/material-lib/read?path=${encodeURIComponent(path)}`);
     const data = await r.json();
-    if (!data.ok) {
-      previewEl.innerHTML = '<p style="color:#ff453a">' + data.error + '</p>';
-      return;
-    }
-    let html = `<div style="margin-bottom:8px;font-size:11px;color:#999">${data.name}</div>`;
-    html += '<div style="white-space:pre-wrap;word-break:break-all;font-size:13px;line-height:1.6;font-family:SF Mono,Menlo,monospace">' + escapeHtml(data.content) + '</div>';
-    previewEl.innerHTML = html;
-  } catch {
-    previewEl.innerHTML = '<p style="color:#ff453a">读取失败</p>';
+    if (!data.ok) throw new Error(data.error);
+    _msOriginalContent = data.content;
+    _renderMsFile(data.name, data.content, data.ext);
+  } catch (err) {
+    pane.innerHTML = `<div class="ms-empty" style="color:#ff453a">加载失败: ${err.message}</div>`;
+  }
+}
+
+function _renderMsFile(name, content, ext) {
+  const pane = document.getElementById('ms-content-pane');
+  const isMd = ext === '.md';
+  pane.innerHTML = `
+    <div class="ms-file-header">
+      <div class="ms-file-name">📝 ${escapeHtml(name)} <span class="ms-badge" id="ms-status-badge">只读</span></div>
+      <div class="ms-file-actions">
+        <button class="ms-btn" id="ms-btn-edit" onclick="_msToggleEdit()">✏️ 编辑</button>
+        <button class="ms-btn primary" id="ms-btn-save" onclick="_msSaveFile()" style="display:none">💾 保存</button>
+        <button class="ms-btn" id="ms-btn-cancel" onclick="_msCancelEdit()" style="display:none">取消</button>
+      </div>
+    </div>
+    <div class="ms-file-body" id="ms-file-body">
+      <div class="md-content" id="ms-md-view">${isMd ? renderMarkdown(content) : escapeHtml(content)}</div>
+      <textarea class="ms-editor" id="ms-editor" style="display:none">${escapeHtml(content)}</textarea>
+    </div>`;
+}
+
+function _msToggleEdit() {
+  _msEditMode = true;
+  const editor = document.getElementById('ms-editor');
+  const mdView = document.getElementById('ms-md-view');
+  const btnEdit = document.getElementById('ms-btn-edit');
+  const btnSave = document.getElementById('ms-btn-save');
+  const btnCancel = document.getElementById('ms-btn-cancel');
+  const badge = document.getElementById('ms-status-badge');
+  editor.style.display = '';
+  mdView.style.display = 'none';
+  btnEdit.style.display = 'none';
+  btnSave.style.display = '';
+  btnCancel.style.display = '';
+  badge.textContent = '编辑中';
+  badge.className = 'ms-badge';
+  editor.focus();
+}
+
+function _msCancelEdit() {
+  _msEditMode = false;
+  const editor = document.getElementById('ms-editor');
+  const mdView = document.getElementById('ms-md-view');
+  const btnEdit = document.getElementById('ms-btn-edit');
+  const btnSave = document.getElementById('ms-btn-save');
+  const btnCancel = document.getElementById('ms-btn-cancel');
+  const badge = document.getElementById('ms-status-badge');
+  editor.value = _msOriginalContent;
+  editor.style.display = 'none';
+  mdView.style.display = '';
+  btnEdit.style.display = '';
+  btnSave.style.display = 'none';
+  btnCancel.style.display = 'none';
+  badge.textContent = '只读';
+  badge.className = 'ms-badge';
+}
+
+async function _msSaveFile() {
+  if (!_msCurrentFile) return;
+  const editor = document.getElementById('ms-editor');
+  const btnSave = document.getElementById('ms-btn-save');
+  const badge = document.getElementById('ms-status-badge');
+  const newContent = editor.value;
+  btnSave.disabled = true;
+  btnSave.textContent = '保存中...';
+  try {
+    const r = await fetch('/api/material-lib/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: _msCurrentFile, content: newContent }),
+    });
+    const data = await r.json();
+    if (!data.ok) throw new Error(data.error);
+    _msOriginalContent = newContent;
+    badge.textContent = '已保存';
+    badge.className = 'ms-badge saved';
+    setTimeout(() => {
+      badge.textContent = '只读';
+      badge.className = 'ms-badge';
+    }, 2000);
+    _msCancelEdit();
+    const mdView = document.getElementById('ms-md-view');
+    const isMd = _msCurrentFile.endsWith('.md');
+    mdView.innerHTML = isMd ? renderMarkdown(newContent) : escapeHtml(newContent);
+  } catch (err) {
+    alert('保存失败: ' + err.message);
+  } finally {
+    btnSave.disabled = false;
+    btnSave.textContent = '💾 保存';
   }
 }
 
@@ -1742,7 +2073,7 @@ function renderHistory(results, container) {
       for (const f of files) {
         const sizeStr = f.size > 1024 ? (f.size > 1048576 ? (f.size/1048576).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB') : f.size+'B';
         catHtml += `<div class="history-file" data-path="${encodeURIComponent(f.path)}" data-ext="${f.ext}">
-          <div class="hf-name">${f.name}</div>
+          <div class="hf-name">${f.display_name || f.name.replace(/\.md$/,'')}</div>
           <div class="hf-meta">${f.mtime} · ${sizeStr}</div>
           <div class="hf-actions">
             <button onclick="previewFile('${encodeURIComponent(f.path)}','${f.ext}')">预览</button>

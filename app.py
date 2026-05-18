@@ -38,12 +38,13 @@ SPIDER_DIR = TOOLS_DIR / "博主蒸馏" / "spider_xhs"
 DATA_DIR = TOOLS_DIR / "博主蒸馏" / "data"
 
 # 素材库子目录
-MATERIAL_BLOGGER_DIR = OUTPUT_DIR / "博主分析"  # 已分析的博主风格（deep_analyze产出）
+MATERIAL_BLOGGER_DIR = MATERIAL_DIR / "博主风格"  # 已分析的博主风格（deep_analyze产出）
 MATERIAL_SELF_DIR = MATERIAL_DIR / "自我参数"    # 自己的写作参数
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 MATERIAL_SELF_DIR.mkdir(parents=True, exist_ok=True)
+MATERIAL_BLOGGER_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── 全局任务管理 ──
 _tasks: dict[str, dict] = {}
@@ -134,6 +135,8 @@ def _find_deep_output(prefix=""):
     search_roots = [OUTPUT_DIR]
     if MATERIAL_SELF_DIR.is_dir():
         search_roots.append(MATERIAL_SELF_DIR)
+    if MATERIAL_BLOGGER_DIR.is_dir():
+        search_roots.append(MATERIAL_BLOGGER_DIR)
     dm, tm, bk, fm, tp = [], [], [], [], []
     for root in search_roots:
         dm.extend(root.rglob(f"{prefix}*_数据底稿.md"))
@@ -548,13 +551,14 @@ def _scan_rewrite_styles():
             content = ""
         name = _extract_style_name(skill_path, content)
         styles.append({"name": name, "path": str(skill_path), "preview": content[:200]})
-    for skill_path in sorted(OUTPUT_DIR.rglob("SKILL.md")):
-        try:
-            content = skill_path.read_text(encoding="utf-8")
-        except Exception:
-            content = ""
-        name = _extract_style_name(skill_path, content)
-        styles.append({"name": name, "path": str(skill_path), "preview": content[:200]})
+    for search_dir in [OUTPUT_DIR, MATERIAL_BLOGGER_DIR]:
+        for skill_path in sorted(search_dir.rglob("SKILL.md")):
+            try:
+                content = skill_path.read_text(encoding="utf-8")
+            except Exception:
+                content = ""
+            name = _extract_style_name(skill_path, content)
+            styles.append({"name": name, "path": str(skill_path), "preview": content[:200]})
     seen = set()
     unique = []
     for s in styles:
@@ -700,7 +704,7 @@ def rewrite_generate():
 #  文案改写 — LLM 改写
 # =============================================================
 
-LLM_API_BASE_DEFAULT = "https://api.minimaxi.com/v1"
+LLM_API_BASE_DEFAULT = "https://api.deepseek.com/v1"
 
 
 def _get_llm_key() -> str:
@@ -758,7 +762,7 @@ def _call_llm(system_prompt: str, user_text: str) -> dict:
         "Content-Type": "application/json",
     }
     payload = {
-        "model": "MiniMax-M2.7",
+        "model": "deepseek-v4-flash",
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_text},
@@ -900,12 +904,22 @@ def _scan_bloggers():
             ("_AI蒸馏任务.md", "ai_task"),
             ("_全量笔记结构化分析.md", "structured_analysis"),
         ]:
-            for md in OUTPUT_DIR.rglob(f"{name}{suffix}"):
-                info["files"][key] = str(md)
-                break
+            for root in [OUTPUT_DIR, MATERIAL_BLOGGER_DIR]:
+                if root.is_dir():
+                    matches = list(root.rglob(f"{name}{suffix}"))
+                    if matches:
+                        info["files"][key] = str(matches[0])
+                        break
 
-        notes_dir = OUTPUT_DIR / f"{name}_笔记"
-        if notes_dir.is_dir():
+        # 从新结构（嵌套）/ 旧结构（扁平）两种方式找笔记目录
+        notes_dir = None
+        for root in [OUTPUT_DIR, MATERIAL_BLOGGER_DIR]:
+            if root.is_dir():
+                matches = sorted(root.rglob(f"{name}_笔记"), key=lambda p: len(str(p)))
+                if matches:
+                    notes_dir = matches[0]
+                    break
+        if notes_dir is not None and notes_dir.is_dir():
             info["files"]["notes_dir"] = str(notes_dir)
             info["posts"] = []
             for sub in sorted(notes_dir.iterdir()):
@@ -930,6 +944,143 @@ def _scan_bloggers():
                     info["posts"].append(post)
 
         bloggers.append(info)
+
+    # 第二遍：扫描 素材库/博主风格/ 中的目录，补充没有 analysis.json 的博主
+    if MATERIAL_BLOGGER_DIR.is_dir():
+        for entry in sorted(MATERIAL_BLOGGER_DIR.iterdir()):
+            if not entry.is_dir() or entry.name.startswith('_'):
+                continue
+            name = entry.name
+            if name in seen:
+                continue
+            seen.add(name)
+
+            info = {"name": name, "files": {}, "notes_count": 0, "avg_likes": 0, "total_likes": 0}
+
+            # 尝试找笔记目录（兼容 笔记/ 和 {name}_笔记/ 两种命名）
+            notes_dir = None
+            for sub_name in [f"{name}_笔记", "笔记"]:
+                p = entry / sub_name
+                if p.is_dir():
+                    notes_dir = p
+                    break
+            if notes_dir is not None:
+                # 如果笔记目录的子目录里没有 正文.txt，可能是多了一层（如 笔记/薯岛_笔记/）
+                inner = sorted(notes_dir.iterdir())
+                if all(sub.is_dir() and not (sub / "正文.txt").exists() for sub in inner):
+                    # 取第一个有子目录的级
+                    for sub in inner:
+                        deeper = list(sub.iterdir())
+                        if any(d.is_dir() for d in deeper):
+                            notes_dir = sub
+                            break
+                info["files"]["notes_dir"] = str(notes_dir)
+                info["posts"] = []
+                for sub in sorted(notes_dir.iterdir()):
+                    if sub.is_dir():
+                        body_file = sub / "正文.txt"
+                        img_file = sub / "图片列表.txt"
+                        post = {"folder": sub.name, "title": sub.name.split("_", 1)[-1] if "_" in sub.name else sub.name}
+                        if body_file.exists():
+                            try:
+                                post["content"] = body_file.read_text(encoding="utf-8").strip()
+                            except Exception:
+                                pass
+                        if img_file.exists():
+                            try:
+                                imgs = img_file.read_text(encoding="utf-8").strip().split("\n")
+                                post["images"] = [l.strip() for l in imgs if l.strip()]
+                            except Exception:
+                                pass
+                        info["posts"].append(post)
+                info["notes_count"] = len(info.get("posts", []))
+
+            # 读取 analysis_data.json 获取统计数据
+            ad_file = entry / "analysis_data.json"
+            if ad_file.exists():
+                try:
+                    with open(ad_file, "r", encoding="utf-8") as f:
+                        ad = json.load(f)
+                    if not info.get("notes_count"):
+                        info["notes_count"] = ad.get("total_notes", 0)
+                    if not info.get("total_likes"):
+                        info["total_likes"] = ad.get("total_likes", 0)
+                    if not info.get("avg_likes"):
+                        info["avg_likes"] = round(ad.get("avg_likes", 0), 1)
+                    info["files"]["analysis_data"] = str(ad_file)
+                except Exception:
+                    pass
+
+            # 标记已存在的风格文件
+            for skill_name in [f"{name}_创作指南.skill", "创作指南.skill"]:
+                skill_dir = entry / skill_name
+                if skill_dir.is_dir():
+                    skill_md = skill_dir / "SKILL.md"
+                    info["files"]["deep_breakdown"] = str(skill_md) if skill_md.exists() else str(skill_dir)
+                    break
+
+            # 扫描博主根目录下的 .md 文件（如 蒸馏报告.md、粗门问题.md 等）
+            for md_file in sorted(entry.glob("*.md")):
+                fn = md_file.name
+                if "博主深度拆解" in fn or "深度拆解" in fn:
+                    info["files"]["deep_breakdown"] = info["files"].get("deep_breakdown") or str(md_file)
+                elif "内容公式" in fn or "公式总结" in fn:
+                    info["files"]["formula_summary"] = str(md_file)
+                elif "选题素材" in fn or "选题库" in fn:
+                    info["files"]["topic_library"] = str(md_file)
+                elif "数据底稿" in fn:
+                    info["files"]["data_draft"] = str(md_file)
+                elif "蒸馏报告" in fn:
+                    info["files"]["distill_report"] = str(md_file)
+                elif "帖子分析" in fn:
+                    info["files"]["post_analysis"] = info["files"].get("post_analysis") or str(md_file)
+                elif "诊断报告" in fn or "账号诊断" in fn:
+                    info["files"]["diagnosis"] = str(md_file)
+                else:
+                    label = fn.replace(".md", "").replace(name, "").strip("_- ")
+                    if label:
+                        info["files"]["report_" + label] = str(md_file)
+                    else:
+                        info["files"]["report_" + fn.replace(".md", "")] = str(md_file)
+
+            # 扫描 分析报告/ 子目录
+            report_dir = entry / "分析报告"
+            if report_dir.is_dir():
+                for md_file in sorted(report_dir.rglob("*.md")):
+                    fn = md_file.name
+                    if "帖子分析" in fn:
+                        info["files"]["post_analysis"] = info["files"].get("post_analysis") or str(md_file)
+                    elif "博主深度拆解" in fn or "深度拆解" in fn:
+                        info["files"]["deep_breakdown"] = info["files"].get("deep_breakdown") or str(md_file)
+                    elif "蒸馏报告" in fn:
+                        info["files"]["distill_report"] = str(md_file)
+                    elif "诊断报告" in fn or "账号诊断" in fn:
+                        info["files"]["diagnosis"] = str(md_file)
+                    else:
+                        info["files"]["report_" + fn.replace(".md", "")] = str(md_file)
+                for html_file in sorted(report_dir.rglob("*.html")):
+                    fn = html_file.name
+                    if "蒸馏报告" in fn:
+                        info["files"]["distill_report_html"] = str(html_file)
+
+            # 扫描 _过程文件/原始素材/ 中的关联文件
+            process_dir = MATERIAL_BLOGGER_DIR / "_过程文件" / "原始素材"
+            if process_dir.is_dir():
+                for md_file in sorted(process_dir.glob(f"{name}_*.md")):
+                    fn = md_file.name
+                    if "博主深度拆解" in fn:
+                        info["files"]["deep_breakdown"] = info["files"].get("deep_breakdown") or str(md_file)
+                    elif "内容公式" in fn or "公式总结" in fn:
+                        info["files"]["formula_summary"] = info["files"].get("formula_summary") or str(md_file)
+                    elif "选题素材" in fn or "选题库" in fn:
+                        info["files"]["topic_library"] = info["files"].get("topic_library") or str(md_file)
+                    elif "数据底稿" in fn:
+                        info["files"]["data_draft"] = info["files"].get("data_draft") or str(md_file)
+                    elif "全量笔记结构化分析" in fn:
+                        info["files"]["structured_analysis"] = info["files"].get("structured_analysis") or str(md_file)
+
+            bloggers.append(info)
+
     return bloggers
 
 
@@ -961,6 +1112,21 @@ def api_blogger_file():
     except Exception:
         return jsonify({"ok": False, "error": "read failed"})
     return jsonify({"ok": True, "content": content, "name": full_path.name})
+
+
+@app.route("/api/blogger-html")
+def api_blogger_html():
+    filepath = request.args.get("path", "")
+    if not filepath:
+        return "no path", 400
+    full_path = Path(filepath).resolve()
+    if not full_path.is_file():
+        return "file not found", 404
+    try:
+        content = full_path.read_text(encoding="utf-8")
+    except Exception:
+        return "read failed", 500
+    return content
 
 
 # =============================================================
@@ -1020,6 +1186,27 @@ def material_lib_read():
         "ext": ext,
         "section": next((s for s, p in _MATERIAL_ROOTS.items() if str(full_path).startswith(p)), ""),
     })
+
+
+@app.route("/api/material-lib/write", methods=["POST"])
+def material_lib_write():
+    """写入素材库文件（安全检查：必须在自我参数目录内）"""
+    body = request.get_json(force=True)
+    filepath = body.get("path", "")
+    content = body.get("content", "")
+    if not filepath:
+        return jsonify({"ok": False, "error": "no path"})
+    full_path = Path(filepath).resolve()
+    self_dir = MATERIAL_SELF_DIR.resolve()
+    if not str(full_path).startswith(str(self_dir)):
+        return jsonify({"ok": False, "error": "only self-params files can be edited"})
+    if not full_path.is_file():
+        return jsonify({"ok": False, "error": "file not found"})
+    try:
+        full_path.write_text(content, encoding="utf-8")
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+    return jsonify({"ok": True})
 
 
 # =============================================================
@@ -1278,19 +1465,24 @@ def history_results():
         results["博主分析"]["采集数据"].append(_file_info(f))
     for f in sorted(DATA_DIR.glob("*_analysis.json"), key=lambda f: f.stat().st_mtime, reverse=True):
         results["博主分析"]["分析结果"].append(_file_info(f))
-    for pattern in ["*_数据底稿.md", "*_AI蒸馏任务.md"]:
-        for root in [OUTPUT_DIR, OUTPUT_DIR / "博主分析"]:
+    for pattern in ["*_数据底稿.md", "*_AI蒸馏任务.md", "*_分析报告.html", "*_创作指南.skill"]:
+        for root in [OUTPUT_DIR, OUTPUT_DIR / "博主分析", MATERIAL_BLOGGER_DIR]:
             if root.is_dir():
                 for f in sorted(root.glob(pattern), key=lambda f: f.stat().st_mtime, reverse=True):
                     if not any(f.name == existing["name"] for existing in results["博主分析"]["深度蒸馏"]):
                         results["博主分析"]["深度蒸馏"].append(_file_info(f))
-    for f in sorted((OUTPUT_DIR / "博主分析").glob("*_分析报告.html"), key=lambda f: f.stat().st_mtime, reverse=True):
-        results["博主分析"]["深度蒸馏"].append(_file_info(f))
-    for f in sorted((OUTPUT_DIR / "博主分析").glob("*_创作指南.skill"), key=lambda f: f.stat().st_mtime, reverse=True):
-        results["博主分析"]["深度蒸馏"].append(_file_info(f))
 
     for f in sorted((OUTPUT_DIR / "帖子深挖").glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True):
-        results["帖子深挖"]["分析报告"].append(_file_info(f))
+        info = _file_info(f)
+        # 从文件内容中提取帖子标题
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace")
+            m = re.search(r'\*\*标题\*\*:\s*(.+)', text)
+            if m:
+                info["display_name"] = m.group(1).strip()
+        except Exception:
+            pass
+        results["帖子深挖"]["分析报告"].append(info)
 
     return jsonify({"ok": True, "results": results})
 
