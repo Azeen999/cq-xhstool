@@ -1238,9 +1238,20 @@ def task_stream(task_id: str):
             if line is None:
                 with _task_lock:
                     t = _tasks.get(task_id, {})
+                rf = t.get("result_files", {})
+                if not rf and t.get("done") and t.get("exit_code") == 0:
+                    tt = t.get("type", "")
+                    if tt == "keyword_search":
+                        kw = t.get("keyword", "")
+                        files = sorted(SEARCH_OUTPUT_DIR.glob(f"{kw}_搜索结果_*.json"),
+                                       key=lambda f: f.stat().st_mtime, reverse=True)
+                        if files:
+                            rf["search_result"] = str(files[0])
+                            with _task_lock:
+                                _tasks[task_id]["result_files"] = rf
                 payload = json.dumps({
                     "exit_code": t.get("exit_code", -1),
-                    "result_files": t.get("result_files", {}),
+                    "result_files": rf,
                     "type": t.get("type", ""),
                 })
                 yield f"event: done\ndata: {payload}\n\n"
@@ -1290,6 +1301,12 @@ def task_status(task_id: str):
             md_files = sorted(pd_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)
             if md_files:
                 result_files["report_md"] = str(md_files[0])
+        elif t == "keyword_search":
+            kw = task.get("keyword", "")
+            files = sorted(SEARCH_OUTPUT_DIR.glob(f"{kw}_搜索结果_*.json"),
+                           key=lambda f: f.stat().st_mtime, reverse=True)
+            if files:
+                result_files["search_result"] = str(files[0])
 
     return jsonify({
         "ok": True, "task_id": task_id, "done": done,

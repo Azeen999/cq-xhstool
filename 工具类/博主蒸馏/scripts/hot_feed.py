@@ -81,19 +81,14 @@ def fetch_hot_feed(category: str, max_notes: int, output_dir: str):
     cat_label = CATEGORY_MAP.get(category, category)
     print(f"📡 获取频道 [{cat_label}] 热门推荐...")
 
-    success, msg, res_json = api.get_homefeed_recommend_by_num(category, max_notes, cookies_str)
+    success, msg, note_list = api.get_homefeed_recommend_by_num(category, max_notes, cookies_str)
 
-    if not success or not res_json:
+    if not success or not note_list:
         print(f"__ERROR__: 获取失败: {msg}")
         sys.exit(1)
 
-    items = res_json.get("data", {}).get("items", [])
-    if not items:
-        print("__ERROR__: 返回数据为空")
-        sys.exit(1)
-
     notes = []
-    for item in items:
+    for item in note_list:
         try:
             note_data = handle_note_info(item)
             note_id = note_data.get("note_id", item.get("id", ""))

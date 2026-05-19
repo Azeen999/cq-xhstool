@@ -1649,7 +1649,6 @@ async function loadKsSearchResult(resultFiles) {
 
 function renderKsResults(data, container) {
   const results = data.results || [];
-  // 统计汇总
   let totalLikes = 0, totalCollects = 0, totalComments = 0;
   for (const r of results) {
     const n = r.note || {};
@@ -1675,25 +1674,12 @@ function renderKsResults(data, container) {
     </div>
     <div style="background:#e8f4ff;border:1px solid #cce8ff;border-radius:10px;padding:12px 18px;text-align:center;flex:1;min-width:100px">
       <div style="font-size:20px;font-weight:700;color:#007aff">${totalComments}</div>
-	  <div style="margin-bottom:12px">
-	    <button class="btn" style="font-size:12px;padding:4px 14px" onclick="exportKsExcel()">📥 导出 Excel</button>
-	  </div>
-
       <div style="font-size:11px;color:#999;margin-top:2px">总评论</div>
-	  <div style="margin-bottom:12px">
-	    <button class="btn" style="font-size:12px;padding:4px 14px" onclick="exportKsExcel()">📥 导出 Excel</button>
-	  </div>
-
     </div>
-	  <div style="margin-bottom:12px">
-	    <button class="btn" style="font-size:12px;padding:4px 14px" onclick="exportKsExcel()">📥 导出 Excel</button>
-	  </div>
-
   </div>
-	  <div style="margin-bottom:12px">
-	    <button class="btn" style="font-size:12px;padding:4px 14px" onclick="exportKsExcel()">📥 导出 Excel</button>
-	  </div>
-`;
+  <div style="margin-bottom:16px">
+    <button class="btn" style="font-size:12px;padding:4px 14px" onclick="exportKsExcel()">📥 导出 Excel</button>
+  </div>`;
 
   for (let i = 0; i < results.length; i++) {
     const note = results[i].note || {};
@@ -1716,7 +1702,6 @@ function renderKsResults(data, container) {
 
     html += `<div class="card" style="margin-bottom:14px;padding:14px;position:relative">`;
 
-    // 图片缩略图
     if (imgList.length > 0) {
       const showImgs = imgList.slice(0, 3);
       html += `<div style="display:flex;gap:4px;margin-bottom:8px;overflow:hidden;border-radius:6px">`;
@@ -1731,7 +1716,6 @@ function renderKsResults(data, container) {
       html += `</div>`;
     }
 
-    // 标题 + 原文链接
     html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
       <div style="flex:1">
         <div style="font-size:15px;font-weight:600;margin-bottom:4px">${escapeHtml(title)}</div>
@@ -1747,19 +1731,16 @@ function renderKsResults(data, container) {
       ${noteUrl ? `<a href="${escapeHtml(noteUrl)}" target="_blank" style="font-size:11px;color:#007aff;white-space:nowrap;margin-left:8px">🔗 原文</a>` : ''}
     </div>`;
 
-    // 描述
     if (desc) {
       html += `<div style="font-size:13px;color:#333;margin:8px 0;white-space:pre-wrap;line-height:1.6;max-height:80px;overflow:hidden">${escapeHtml(desc)}</div>`;
     }
 
-    // 互动数据行
     html += `<div style="display:flex;gap:14px;font-size:12px;color:#999;margin-bottom:${comments.length ? '8px' : '0'}">
       <span>❤️ ${likes}</span><span>⭐ ${collects}</span><span>💬 ${commentCount}</span>
       <span>🔁 ${shareCount}</span>
       ${tags.length ? `<span style="color:#666">${tags.map(t => '#' + escapeHtml(t)).join(' ')}</span>` : ''}
     </div>`;
 
-    // 评论区域
     if (comments.length > 0) {
       const displayId = 'ks-comments-' + i;
       html += `<div style="border-top:1px solid #f0f0f0;padding-top:8px;margin-top:8px">
@@ -1772,11 +1753,12 @@ function renderKsResults(data, container) {
       html += `</div>`;
       if (comments.length > 5) {
         html += `<div style="text-align:center;padding:6px 0">
-          <button class="btn" style="font-size:12px;padding:4px 16px" onclick="showMoreComments('${displayId}', ${i}, 5)">显示更多 (${comments.length - 5})</button>
+          <button class="btn" style="font-size:12px;padding:4px 16px" data-container="${displayId}" data-idx="${i}" data-from="5" onclick="showMoreComments(this)">显示更多 (${comments.length - 5})</button>
         </div>`;
       }
-      html += `<script>if(!window._ksCommentsData) window._ksCommentsData={}; window._ksCommentsData[${i}] = ${JSON.stringify(comments)};</script>`;
       html += '</div>';
+      if (!window._ksCommentsData) window._ksCommentsData = {};
+      window._ksCommentsData[i] = comments;
     }
 
     html += '</div>';
@@ -1806,20 +1788,21 @@ function renderCommentHtml(c) {
   </div>`;
 }
 
-function showMoreComments(containerId, dataIdx, from) {
+function showMoreComments(btn) {
+  const containerId = btn.dataset.container;
+  const dataIdx = parseInt(btn.dataset.idx);
+  const from = parseInt(btn.dataset.from);
   const container = document.getElementById(containerId);
   if (!container || !window._ksCommentsData || !window._ksCommentsData[dataIdx]) return;
   const comments = window._ksCommentsData[dataIdx];
-  const remaining = comments.length - from;
-  const toShow = Math.min(remaining, 10);
+  const toShow = Math.min(comments.length - from, 10);
   for (let j = from; j < from + toShow; j++) {
     container.insertAdjacentHTML('beforeend', renderCommentHtml(comments[j]));
   }
-  const btn = container.parentElement.querySelector('button');
   const newRemaining = comments.length - (from + toShow);
   if (newRemaining > 0) {
     btn.textContent = '显示更多 (' + newRemaining + ')';
-    btn.setAttribute('onclick', `showMoreComments('${containerId}', ${dataIdx}, ${from + toShow})`);
+    btn.dataset.from = String(from + toShow);
   } else {
     btn.parentElement.remove();
   }
@@ -1847,18 +1830,16 @@ async function loadKsHistory() {
       listEl.innerHTML = '<div style="color:#999;font-size:12px;text-align:center;padding:20px">暂无搜索记录</div>';
       return;
     }
-    listEl.innerHTML = data.records.map(rec => {
-      // 用 data-path 避免 onclick 中反斜杠被 JS 转义吃掉
-      const safePath = escapeHtml(rec.path).replace(/\\/g, '\\\\');
-      return `<div class="pdh-item" data-path="${safePath}" style="cursor:pointer">
+    listEl.innerHTML = data.records.map((rec, idx) => {
+      return `<div class="pdh-item" data-idx="${idx}" style="cursor:pointer">
         <div style="font-weight:600;font-size:13px">🔍 ${escapeHtml(rec.keyword)}</div>
         <div style="font-size:11px;color:#999">${rec.total} 条 · ${escapeHtml(rec.search_time)}</div>
       </div>`;
     }).join('');
-    // 委托点击
+    const paths = data.records.map(r => r.path);
     listEl.onclick = (e) => {
       const item = e.target.closest('.pdh-item');
-      if (item) openKsHistory(item.dataset.path);
+      if (item) openKsHistory(paths[parseInt(item.dataset.idx)]);
     };
   } catch {
     listEl.innerHTML = '<div style="color:#999;font-size:12px;text-align:center;padding:20px">加载失败</div>';

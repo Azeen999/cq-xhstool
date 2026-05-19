@@ -52,26 +52,14 @@ def search_users(keyword: str, max_users: int, output_dir: str):
     api = XHS_Apis()
     print(f"🔍 搜索用户: {keyword}")
 
-    success, msg, res_json = api.search_some_user(keyword, max_users, cookies_str)
+    success, msg, user_list = api.search_some_user(keyword, max_users, cookies_str)
 
-    if not success or not res_json:
+    if not success or not user_list:
         print(f"__ERROR__: 搜索失败: {msg}")
         sys.exit(1)
 
     users = []
-    raw_users = res_json.get("data", {}).get("users", [])
-    if not raw_users:
-        items = res_json.get("data", {}).get("items", [])
-        for item in items:
-            user_card = item.get("user_card", item.get("user", {}))
-            if user_card:
-                raw_users.append(user_card)
-
-    if not raw_users:
-        print("__ERROR__: 未找到用户")
-        sys.exit(1)
-
-    for u in raw_users:
+    for u in user_list:
         try:
             user_id = u.get("user_id", u.get("userId", ""))
             nickname = u.get("nickname", u.get("nickName", ""))
