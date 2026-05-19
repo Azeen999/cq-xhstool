@@ -152,6 +152,17 @@ def convert_note_to_distiller_format(note_info, comments_raw=None):
             },
             "tagList": [{"name": t} for t in note_info.get("tags", [])],
             "time": 0,
+            # 以下为新增字段
+            "noteUrl": note_info.get("note_url", ""),
+            "userId": note_info.get("user_id", ""),
+            "userHomeUrl": note_info.get("home_url", ""),
+            "nickname": note_info.get("nickname", ""),
+            "avatar": note_info.get("avatar", ""),
+            "imageList": note_info.get("image_list", []),
+            "videoCover": note_info.get("video_cover", ""),
+            "videoAddr": note_info.get("video_addr", ""),
+            "ipLocation": note_info.get("ip_location", ""),
+            "uploadTime": note_info.get("upload_time", ""),
         },
         "comments": {"list": []},
         "_feed_id": note_info.get("note_id", ""),
@@ -179,12 +190,16 @@ def convert_note_to_distiller_format(note_info, comments_raw=None):
                 "userInfo": {
                     "nickname": c.get("nickname", "读者"),
                     "userId": c.get("user_id", ""),
+                    "avatar": c.get("avatar", ""),
                 },
                 "subComments": [],
                 "sub_comment_has_more": False,
                 "sub_comment_cursor": "",
                 "note_id": note_info.get("note_id", ""),
                 "id": c.get("comment_id", ""),
+                # 新增
+                "ipLocation": c.get("ip_location", ""),
+                "uploadTime": c.get("upload_time", ""),
             })
         note["comments"]["list"] = converted_comments
 
@@ -334,20 +349,26 @@ def crawl_and_convert(user_id, max_notes, output_dir, xsec_token="", fetch_comme
 
     blogger_nickname = nickname
     blogger_desc = ""
+    blogger_avatar = ""
+    blogger_followers = "0"
     if success_u and user_info and user_info.get('data', {}).get('basic_info'):
         basic = user_info['data']['basic_info']
         if not blogger_nickname:
             blogger_nickname = basic.get('nickname', '')
         blogger_desc = basic.get('desc', '')
+        blogger_avatar = basic.get('imageb', '')
+        interactions = user_info['data'].get('interactions', [])
+        if len(interactions) > 1:
+            blogger_followers = str(interactions[1].get('count', '0'))
 
     final_result = {
         "blogger": {
             "bloggerId": user_id,
             "nickname": blogger_nickname,
             "desc": blogger_desc,
-            "avatar": "",
+            "avatar": blogger_avatar,
             "verified": False,
-            "followerCount": "0",
+            "followerCount": blogger_followers,
             "noteCount": str(len(all_notes)),
         },
         "details": details,

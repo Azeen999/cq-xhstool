@@ -1,8 +1,8 @@
-flask>=3.0
-requests>=2.28
-python-dotenv>=1.0
-loguru>=0.7
-PyExecJS>=1.5
-retry>=0.9
-openpyxl>=3.1
+Flask>=3.0
 jieba>=0.42
+requests>=2.28
+openpyxl>=3.0
+loguru>=0.7
+retry>=0.9
+PyExecJS>=1.5
+python-dotenv>=1.0

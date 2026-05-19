@@ -17,7 +17,7 @@ from pathlib import Path
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, render_template, request, jsonify, Response, send_file
+from flask import Flask, render_template, request, jsonify, Response, send_file, send_from_directory
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
@@ -1628,8 +1628,17 @@ def keyword_search_start():
             files = sorted(SEARCH_OUTPUT_DIR.glob(f"{keyword}_搜索结果_*.json"),
                            key=lambda f: f.stat().st_mtime, reverse=True)
             if files:
+                result_path = str(files[0])
                 with _task_lock:
-                    _tasks[task_id]["result_files"]["search_result"] = str(files[0])
+                    _tasks[task_id]["result_files"]["search_result"] = result_path
+                # 同时写入 SQLite
+                try:
+                    from db import save_search_session
+                    content = files[0].read_text(encoding="utf-8")
+                    data = json.loads(content)
+                    save_search_session(keyword, data, result_path)
+                except Exception as e:
+                    print(f"[DB] 保存搜索记录失败: {e}")
 
     t = threading.Thread(target=_run_subprocess, args=(cmd, log_queue, task_id), daemon=True)
     t.start()
@@ -1703,6 +1712,230 @@ def rag_query():
 
     result = engine.query(question)
     return jsonify(result)
+
+
+# =============================================================
+#  图片缓存代理
+# =============================================================
+
+IMAGE_CACHE_DIR = Path(__file__).resolve().parent / "output" / "image_cache"
+
+
+@app.route("/api/image-proxy")
+def image_proxy():
+    """代理小红书图片，缓存到本地"""
+    url = request.args.get("url", "")
+    if not url:
+        return "", 400
+
+    # 先从缓存取
+    from image_cache_helper import get_cached_path, cache_image
+    cached = get_cached_path(url)
+    if cached:
+        return send_from_directory(os.path.dirname(cached), os.path.basename(cached))
+
+    cached = cache_image(url)
+    if cached:
+        return send_from_directory(os.path.dirname(cached), os.path.basename(cached))
+
+    # 最后尝试直接 302 跳转
+    return "", 404
+
+
+# =============================================================
+#  DB 统计
+# =============================================================
+
+@app.route("/api/db-stats")
+def db_stats():
+    try:
+        from db import query_search_stats, query_history
+        stats = query_search_stats()
+        recent = query_history(limit=10)
+        return jsonify({"ok": True, "stats": stats, "recent": recent})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+# =============================================================
+#  关键词搜索 — Excel 导出
+# =============================================================
+
+@app.route("/api/keyword-search/export")
+def keyword_search_export():
+    filepath = request.args.get("path", "")
+    if not filepath:
+        return jsonify({"ok": False, "error": "no path"}), 400
+    full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return jsonify({"ok": False, "error": "access denied"}), 403
+    if not full_path.is_file():
+        return jsonify({"ok": False, "error": "file not found"}), 404
+
+    try:
+        # 复用 spider_xhs 的 save_to_xlsx 逻辑
+        sys.path.insert(0, str(SPIDER_DIR))
+        from xhs_utils.data_util import save_to_xlsx
+        with open(full_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        results = data.get("results", data.get("data", {}).get("results", []))
+        xlsx_path = str(full_path) + ".xlsx"
+        save_to_xlsx(results, xlsx_path)
+        return send_file(xlsx_path, as_attachment=True, download_name=Path(xlsx_path).name)
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# =============================================================
+#  热门推荐
+# =============================================================
+
+HOTFEED_OUTPUT_DIR = ROOT / "output" / "热榜"
+HOTFEED_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+CATEGORY_MAP = {
+    "general": "通用", "food": "美食", "fitness": "健身", "travel": "旅行",
+    "fashion": "时尚", "beauty": "护肤", "digital": "数码", "home": "家居",
+    "parenting": "育儿", "pet": "宠物", "emotion": "情感", "tech": "科技",
+    "art": "艺术", "sport": "运动", "car": "汽车", "education": "教育",
+    "finance": "财经", "game": "游戏", "knowledge": "知识", "comic": "动漫",
+    "music": "音乐", "fun": "搞笑",
+}
+
+
+@app.route("/api/hot-feed/categories")
+def hot_feed_categories():
+    return jsonify({"ok": True, "categories": CATEGORY_MAP})
+
+
+@app.route("/api/hot-feed/start", methods=["POST"])
+def hot_feed_start():
+    data = request.get_json() or request.form
+    category = (data.get("category") or "general").strip()
+    max_notes = min(int(data.get("max_notes") or 20), 50)
+
+    python = sys.executable
+    script = str(TOOLS_DIR / "博主蒸馏" / "scripts" / "hot_feed.py")
+    cmd = [python, script, "--category", category, "--max-notes", str(max_notes), "--output", str(HOTFEED_OUTPUT_DIR)]
+
+    task_id = _next_id()
+    log_queue = queue.Queue()
+    task = {
+        "id": task_id, "type": "hot_feed", "cmd": cmd,
+        "queue": log_queue, "done": False, "exit_code": None,
+        "result_files": {},
+    }
+    with _task_lock:
+        _tasks[task_id] = task
+
+    def _on_done(task_id, exit_code):
+        if exit_code == 0:
+            files = sorted(HOTFEED_OUTPUT_DIR.glob("hotfeed_*.json"),
+                           key=lambda f: f.stat().st_mtime, reverse=True)
+            if files:
+                with _task_lock:
+                    _tasks[task_id]["result_files"]["hotfeed_result"] = str(files[0])
+
+    t = threading.Thread(target=_run_subprocess, args=(cmd, log_queue, task_id), daemon=True)
+    t.start()
+    return jsonify({"ok": True, "task_id": task_id})
+
+
+@app.route("/api/hot-feed/read")
+def hot_feed_read():
+    filepath = request.args.get("path", "")
+    if not filepath:
+        return jsonify({"ok": False, "error": "no path"})
+    full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return jsonify({"ok": False, "error": "access denied"})
+    if not full_path.is_file():
+        return jsonify({"ok": False, "error": "file not found"})
+    try:
+        content = full_path.read_text(encoding="utf-8")
+        return jsonify({"ok": True, "data": json.loads(content)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+# =============================================================
+#  用户搜索
+# =============================================================
+
+USERSEARCH_OUTPUT_DIR = ROOT / "output" / "用户搜索"
+USERSEARCH_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+@app.route("/api/user-search/start", methods=["POST"])
+def user_search_start():
+    data = request.get_json() or request.form
+    keyword = (data.get("keyword") or "").strip()
+    max_users = min(int(data.get("max_users") or 10), 30)
+    if not keyword:
+        return jsonify({"ok": False, "error": "请输入搜索关键词"})
+
+    python = sys.executable
+    script = str(TOOLS_DIR / "博主蒸馏" / "scripts" / "user_search.py")
+    cmd = [python, script, "--keyword", keyword, "--max-users", str(max_users), "--output", str(USERSEARCH_OUTPUT_DIR)]
+
+    task_id = _next_id()
+    log_queue = queue.Queue()
+    task = {
+        "id": task_id, "type": "user_search", "cmd": cmd,
+        "queue": log_queue, "done": False, "exit_code": None,
+        "keyword": keyword,
+        "result_files": {},
+    }
+    with _task_lock:
+        _tasks[task_id] = task
+
+    t = threading.Thread(target=_run_subprocess, args=(cmd, log_queue, task_id), daemon=True)
+    t.start()
+    return jsonify({"ok": True, "task_id": task_id})
+
+
+@app.route("/api/user-search/read")
+def user_search_read():
+    filepath = request.args.get("path", "")
+    if not filepath:
+        return jsonify({"ok": False, "error": "no path"})
+    full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return jsonify({"ok": False, "error": "access denied"})
+    if not full_path.is_file():
+        return jsonify({"ok": False, "error": "file not found"})
+    try:
+        content = full_path.read_text(encoding="utf-8")
+        return jsonify({"ok": True, "data": json.loads(content)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+@app.route("/api/user-search/history")
+def user_search_history():
+    records = []
+    for f in sorted(USERSEARCH_OUTPUT_DIR.glob("usersearch_*.json"),
+                     key=lambda f: f.stat().st_mtime, reverse=True):
+        keyword = ""
+        total = 0
+        search_time = ""
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            keyword = data.get("keyword", "")
+            total = data.get("total", 0)
+            search_time = data.get("search_time", "")
+        except Exception:
+            keyword = f.stem.replace("usersearch_", "").rsplit("_", 1)[0]
+        from datetime import datetime
+        mtime = datetime.fromtimestamp(f.stat().st_mtime)
+        records.append({
+            "keyword": keyword,
+            "total": total,
+            "search_time": search_time or mtime.strftime("%Y-%m-%d %H:%M"),
+            "path": str(f),
+            "mtime_ts": f.stat().st_mtime,
+        })
+    return jsonify({"ok": True, "records": records})
 
 
 # =============================================================

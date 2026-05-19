@@ -82,10 +82,10 @@ def handle_note_info(data):
     if title.strip() == '':
         title = f'无标题'
     desc = data['note_card']['desc']
-    liked_count = data['note_card']['interact_info']['liked_count']
-    collected_count = data['note_card']['interact_info']['collected_count']
-    comment_count = data['note_card']['interact_info']['comment_count']
-    share_count = data['note_card']['interact_info']['share_count']
+    liked_count = data['note_card']['interact_info'].get('liked_count') or '0'
+    collected_count = data['note_card']['interact_info'].get('collected_count') or '0'
+    comment_count = data['note_card']['interact_info'].get('comment_count') or '0'
+    share_count = data['note_card']['interact_info'].get('share_count') or '0'
     image_list_temp = data['note_card']['image_list']
     image_list = []
     for image in image_list_temp:
