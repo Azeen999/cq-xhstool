@@ -56,3 +56,6 @@ Thumbs.db
 # === 博主风格/分析结果（自动生成） ===
 素材库/博主风格/
 *_analysis.json
+
+# === RAG 缓存 ===
+.rag_index.pkl

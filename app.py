@@ -1106,6 +1106,8 @@ def api_blogger_file():
     if not filepath:
         return jsonify({"ok": False, "error": "no path"})
     full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return jsonify({"ok": False, "error": "access denied"})
     if not full_path.is_file():
         return jsonify({"ok": False, "error": "file not found"})
     try:
@@ -1121,6 +1123,8 @@ def api_blogger_html():
     if not filepath:
         return "no path", 400
     full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return "access denied", 403
     if not full_path.is_file():
         return "file not found", 404
     try:
@@ -1327,10 +1331,15 @@ def task_stop(task_id: str):
 @app.route("/api/download")
 def download_file():
     filepath = request.args.get("path", "")
-    if not filepath or not os.path.isfile(filepath):
+    if not filepath:
+        return "no path", 400
+    full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return "access denied", 403
+    if not full_path.is_file():
         return "File not found", 404
-    filename = os.path.basename(filepath)
-    return send_file(filepath, as_attachment=True, download_name=filename)
+    filename = full_path.name
+    return send_file(str(full_path), as_attachment=True, download_name=filename)
 
 
 @app.route("/api/find-results")
@@ -1535,6 +1544,165 @@ def file_preview():
         "name": full_path.name,
         "ext": ext,
     })
+
+
+# =============================================================
+#  关键词搜索
+# =============================================================
+
+SEARCH_OUTPUT_DIR = OUTPUT_DIR / "关键词搜索"
+SEARCH_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _scan_search_history():
+    """扫描关键词搜索历史"""
+    if not SEARCH_OUTPUT_DIR.is_dir():
+        return []
+    records = []
+    for json_file in sorted(SEARCH_OUTPUT_DIR.glob("*_搜索结果_*.json"), key=lambda f: f.stat().st_mtime, reverse=True):
+        keyword = ""
+        total = 0
+        search_time = ""
+        try:
+            with open(json_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            keyword = data.get("keyword", "")
+            total = data.get("total_notes", 0)
+            search_time = data.get("search_time", "")
+        except Exception:
+            keyword = json_file.stem.split("_搜索结果_")[0]
+        mtime = datetime.fromtimestamp(json_file.stat().st_mtime)
+        records.append({
+            "keyword": keyword,
+            "total": total,
+            "search_time": search_time or mtime.strftime("%Y-%m-%d %H:%M"),
+            "path": str(json_file),
+            "mtime_ts": json_file.stat().st_mtime,
+        })
+    return records
+
+
+@app.route("/api/keyword-search/start", methods=["POST"])
+def keyword_search_start():
+    """启动关键词搜索任务"""
+    data = request.get_json() or request.form
+    keyword = (data.get("keyword") or "").strip()
+    if not keyword:
+        return jsonify({"ok": False, "error": "请输入搜索关键词"})
+
+    max_notes = min(int(data.get("max_notes") or 20), 50)
+    time_range = data.get("time_range") or "all"
+    sort_type = data.get("sort_type") or "general"
+    fetch_comments = data.get("fetch_comments", True)
+
+    python = sys.executable
+    cmd = [
+        python,
+        str(TOOLS_DIR / "博主蒸馏" / "scripts" / "keyword_search.py"),
+        "--keyword", keyword,
+        "--max-notes", str(max_notes),
+        "--time-range", time_range,
+        "--sort", sort_type,
+        "--output", str(SEARCH_OUTPUT_DIR),
+    ]
+    if not fetch_comments:
+        cmd.append("--no-comments")
+
+    task_id = _next_id()
+    log_queue = queue.Queue()
+    task = {
+        "id": task_id,
+        "type": "keyword_search",
+        "cmd": cmd,
+        "queue": log_queue,
+        "done": False,
+        "exit_code": None,
+        "keyword": keyword,
+        "result_files": {},
+    }
+    with _task_lock:
+        _tasks[task_id] = task
+
+    def _on_search_done(task_id, exit_code):
+        if exit_code == 0:
+            files = sorted(SEARCH_OUTPUT_DIR.glob(f"{keyword}_搜索结果_*.json"),
+                           key=lambda f: f.stat().st_mtime, reverse=True)
+            if files:
+                with _task_lock:
+                    _tasks[task_id]["result_files"]["search_result"] = str(files[0])
+
+    t = threading.Thread(target=_run_subprocess, args=(cmd, log_queue, task_id), daemon=True)
+    t.start()
+
+    return jsonify({"ok": True, "task_id": task_id})
+
+
+@app.route("/api/keyword-search/history")
+def keyword_search_history():
+    """获取搜索历史"""
+    return jsonify({"ok": True, "records": _scan_search_history()})
+
+
+@app.route("/api/keyword-search/read")
+def keyword_search_read():
+    """读取搜索结果"""
+    filepath = request.args.get("path", "")
+    if not filepath:
+        return jsonify({"ok": False, "error": "no path"})
+    full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return jsonify({"ok": False, "error": "access denied"})
+    if not full_path.is_file():
+        return jsonify({"ok": False, "error": "file not found"})
+    try:
+        content = full_path.read_text(encoding="utf-8")
+        data = json.loads(content)
+        return jsonify({"ok": True, "data": data})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)})
+
+
+# =============================================================
+#  粗趣 RAG 问答
+# =============================================================
+
+from 工具类.rag_engine import get_engine
+
+
+@app.route("/api/rag/status")
+def rag_status():
+    """RAG 引擎状态"""
+    engine = get_engine()
+    st = engine.status()
+    return jsonify({"ok": True, **st})
+
+
+@app.route("/api/rag/load", methods=["POST"])
+def rag_load():
+    """加载/重新加载知识库"""
+    engine = get_engine()
+    ok = engine.load_knowledge_base(force=True)
+    if ok:
+        return jsonify({"ok": True, "message": f"知识库加载成功，共 {len(engine.chunks)} 个片段"})
+    return jsonify({"ok": False, "error": "知识库加载失败"})
+
+
+@app.route("/api/rag/query", methods=["POST"])
+def rag_query():
+    """RAG 问答"""
+    data = request.get_json() or request.form
+    question = (data.get("question") or "").strip()
+    if not question:
+        return jsonify({"ok": False, "error": "请输入问题"})
+
+    engine = get_engine()
+    if not engine.ready:
+        ok = engine.load_knowledge_base()
+        if not ok:
+            return jsonify({"ok": False, "error": "知识库加载失败"})
+
+    result = engine.query(question)
+    return jsonify(result)
 
 
 # =============================================================
