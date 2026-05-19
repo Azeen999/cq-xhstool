@@ -224,6 +224,28 @@ def classify_opinions(comments):
     return opinions
 
 
+def _parse_note_info(res_json: dict) -> dict:
+    """从 API 原始响应中提取帖子信息"""
+    info = {"title": "无标题", "author": "未知作者", "likes": 0, "collects": 0, "comments": 0, "desc": ""}
+    try:
+        items = res_json.get("data", {}).get("items", [])
+        if not items:
+            return info
+        item = items[0]
+        note_card = item.get("note_card", {})
+        user = note_card.get("user", {})
+        interact = note_card.get("interact_info", {})
+        info["title"] = note_card.get("title", "无标题")
+        info["author"] = user.get("nickname", "未知作者")
+        info["likes"] = interact.get("liked_count", 0)
+        info["collects"] = interact.get("collected_count", 0)
+        info["comments"] = interact.get("comment_count", 0)
+        info["desc"] = note_card.get("desc", "")
+    except Exception as e:
+        print(f"⚠️ 解析帖子信息异常: {e}")
+    return info
+
+
 def generate_report(post_info, comments, output_file=None):
     """生成Markdown报告"""
     # 帖子信息
@@ -388,15 +410,17 @@ def main():
     if not post_info or not success:
         print(f"❌ 获取帖子信息失败: {msg}")
         sys.exit(1)
-    
-    print(f"✅ 获取帖子成功: {post_info.get('title', '无标题')}")
-    
+
+    # 从原始 API 响应中提取帖子信息
+    parsed = _parse_note_info(post_info)
+    print(f"✅ 获取帖子成功: {parsed['title']}")
+
     # 模拟人类阅读帖子的延迟
     print("📖 模拟阅读帖子中...")
     read_time = random.uniform(3, 8) if args.slow else random.uniform(1, 3)
     print(f"  ⏳ 阅读中 {read_time:.1f}s...")
     time.sleep(read_time)
-    
+
     # 获取评论（带重试机制）
     print("🔍 正在获取评论...")
     comments = []
@@ -406,7 +430,7 @@ def main():
             comment_delay = random.uniform(2, 4) if args.slow else random.uniform(1, 2)
             print(f"  ⏳ 准备获取评论，等待 {comment_delay:.1f}s...")
             time.sleep(comment_delay)
-            
+
             success, msg, comments = xhs_apis.get_note_all_comment(args.url, cookies_str)
             if success:
                 break
@@ -421,7 +445,7 @@ def main():
                 delay = exponential_backoff(attempt)
                 print(f"  等待 {delay:.1f}s 后重试...")
                 time.sleep(delay)
-    
+
     if not success:
         print(f"⚠️ 获取评论失败: {msg}")
         comments = []
@@ -438,14 +462,14 @@ def main():
                     all_comments.append(sub_comment)
         comments = all_comments
         print(f"✅ 获取评论成功: {len(comments)}条 (包含二级评论)")
-    
+
     # 恢复原工作目录（确保输出文件路径正确）
     os.chdir(original_cwd)
     print(f"📁 恢复工作目录到: {original_cwd}")
-    
+
     # 生成报告
     print("📝 正在生成分析报告...")
-    report = generate_report(post_info, comments, args.output)
+    report = generate_report(parsed, comments, args.output)
     
     # 打印摘要
     print("\n" + "="*60)
