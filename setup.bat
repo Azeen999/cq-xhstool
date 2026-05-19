@@ -1,27 +1,26 @@
 @echo off
-chcp 65001 >/dev/null
+chcp 65001 >nul
 echo ============================================
-echo   小红书工具箱 - 一键安装
+echo   XHS Toolbox - Setup
 echo ============================================
 echo.
 
-echo [1/3] 安装 Python 依赖...
+echo [1/3] Installing Python dependencies...
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 if %errorlevel% neq 0 (
-    echo pip 安装失败，尝试无镜像源...
+    echo pip install failed, retrying without mirror...
     pip install -r requirements.txt
 )
 echo.
 
-echo [2/3] 检查 Node.js...
-where node >/dev/null 2>&1
+echo [2/3] Checking Node.js...
+where node >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ⚠️ 未检测到 Node.js，请先安装 https://nodejs.org/
-    echo   部分小红书API加密功能需要 Node.js 运行环境
-    echo   跳过 npm install
+    echo [INFO] Node.js not found. Install from https://nodejs.org/
+    echo   Skip npm install
 ) else (
-    echo Node.js 已安装
-    echo [3/3] 安装 Spider_XHS 依赖...
+    echo Node.js found
+    echo [3/3] Installing Spider_XHS dependencies...
     cd 工具类\博主蒸馏\spider_xhs
     npm install
     cd ..\..\..
@@ -29,11 +28,11 @@ if %errorlevel% neq 0 (
 echo.
 
 echo ============================================
-echo ✅ 安装完成！
+echo Setup complete!
 echo.
-echo 接下来需要配置 Cookie：
-echo   1. 复制 .env.example 为 .env
-echo   2. 填入小红书 Cookie 和 DeepSeek API Key
-echo   3. 运行 start.bat 启动
+echo Next steps:
+echo   1. Copy .env.example to .env
+echo   2. Fill in Xiaohongshu Cookie and DeepSeek API Key
+echo   3. Run start.bat
 echo ============================================
 pause
