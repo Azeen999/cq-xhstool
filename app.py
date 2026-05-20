@@ -1,6 +1,6 @@
 """
 小红书工具箱 — 统一 Web 入口
-包含：博主分析、帖子深挖、文案改写、写作库
+包含：博主分析、帖子深挖、写作库
 一键启动：python app.py
 """
 
@@ -16,6 +16,9 @@ from datetime import datetime
 from pathlib import Path
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
+# 嵌入版 Python 不会自动把脚本目录加入 sys.path，需要手动添加
+if os.getcwd() not in sys.path:
+    sys.path.insert(0, os.getcwd())
 
 from flask import Flask, render_template, request, jsonify, Response, send_file, send_from_directory
 
@@ -538,317 +541,6 @@ def start_post_dive():
     return jsonify({"ok": True, "task_id": task_id})
 
 
-# =============================================================
-#  文案改写 — 路由
-# =============================================================
-
-def _scan_rewrite_styles():
-    """扫描所有可用的创作风格 SKILL.md"""
-    styles = []
-    for skill_path in sorted(MATERIAL_SELF_DIR.rglob("SKILL.md")):
-        try:
-            content = skill_path.read_text(encoding="utf-8")
-        except Exception:
-            content = ""
-        name = _extract_style_name(skill_path, content)
-        styles.append({"name": name, "path": str(skill_path), "preview": content[:200]})
-    for search_dir in [OUTPUT_DIR, MATERIAL_BLOGGER_DIR]:
-        for skill_path in sorted(search_dir.rglob("SKILL.md")):
-            try:
-                content = skill_path.read_text(encoding="utf-8")
-            except Exception:
-                content = ""
-            name = _extract_style_name(skill_path, content)
-            styles.append({"name": name, "path": str(skill_path), "preview": content[:200]})
-    seen = set()
-    unique = []
-    for s in styles:
-        if s["name"] not in seen:
-            seen.add(s["name"])
-            unique.append(s)
-    return unique
-
-
-def _extract_style_name(skill_path, content):
-    import re
-    m = re.search(r"^name:\s*(.+)$", content, re.MULTILINE)
-    if m:
-        raw = m.group(1).strip()
-        if any('\u4e00' <= c <= '\u9fff' for c in raw):
-            return raw
-        label = raw.replace("-creation-guide", "").replace("-guide", "").replace("-", " ").title()
-        dm = re.search(r"description:\s*[\|>]*\s*\n?\s*(.+)", content, re.MULTILINE)
-        if dm:
-            desc = dm.group(1).strip()
-            cm = re.search(r"「(.+?)」", desc)
-            if cm:
-                return cm.group(1) + "风格"
-            cm2 = re.search(r"([\u4e00-\u9fff]{2,6})(?:内容|创作|风格|文案)", desc)
-            if cm2:
-                return cm2.group(1) + "风格"
-        return label
-    m2 = re.search(r"^#\s*(.+?)[·\s]", content, re.MULTILINE)
-    if m2:
-        return m2.group(1).strip() + "风格"
-    parent = skill_path.parent.parent
-    if parent.name == "创作指南.skill":
-        return parent.parent.name + "风格"
-    return parent.name
-
-
-@app.route("/api/rewrite/styles")
-def rewrite_styles():
-    return jsonify({"ok": True, "styles": _scan_rewrite_styles()})
-
-
-@app.route("/api/rewrite/generate", methods=["POST"])
-def rewrite_generate():
-    """SSE 流式代理大模型 API，生成改写文案"""
-    body = request.json or {}
-    api_url = body.get("api_url", "").strip()
-    api_key = body.get("api_key", "").strip()
-    model = body.get("model", "deepseek-chat").strip()
-    reference_text = body.get("reference_text", "").strip()
-    style_path = body.get("style_path", "")
-    activity_type = body.get("activity_type", "")
-    word_count = body.get("word_count", 200)
-    tone_level = body.get("tone_level", 3)
-
-    if not api_url:
-        return jsonify({"ok": False, "error": "请填写 API URL"}), 400
-    if not api_key:
-        return jsonify({"ok": False, "error": "请填写 API Key"}), 400
-    if not reference_text:
-        return jsonify({"ok": False, "error": "请输入参考文案"}), 400
-
-    style_content = ""
-    if style_path:
-        try:
-            style_content = Path(style_path).read_text(encoding="utf-8")
-        except Exception:
-            pass
-
-    tone_map = {1: "正式书面语，少用emoji", 2: "偏书面，偶尔口语化", 3: "口语化，适度emoji", 4: "非常口语化，大量emoji和网络用语", 5: "极致口语化，全emoji+网络梗"}
-    tone_desc = tone_map.get(tone_level, "口语化，适度emoji")
-
-    system_prompt = """你是一个小红书文案创作专家。你的任务是根据用户提供的参考文案和风格要求，改写出符合小红书调性的文案。
-
-## 核心规则
-- 口语化、短句分行、emoji点缀、有安利感
-- 违禁词（不能出现）：第一/最佳/唯一/顶级/极致/绝对、私信/V/微信/卫星/扣1/暗号、淘宝/抖音/京东及其谐音、包教包会/保证/100%有效、史上/全网最低价
-- 合规替换：私信/V/微信 → 点下方链接报名；包教包会 → 专人带教，带你上手
-
-## 输出格式
-**标题**（≤20字）
-
-**正文**
-[改写后的文案]
-
-**Tags**
-#话题标签"""
-
-    user_parts = [f"请根据以下参考文案进行改写：\n\n---\n{reference_text}\n---"]
-    if style_content:
-        user_parts.append(f"\n\n## 必须遵守的创作风格指南\n\n{style_content[:3000]}\n\n请严格遵循以上风格指南进行创作。")
-    if activity_type:
-        user_parts.append(f"\n\n## 内容类型\n{activity_type}")
-    user_parts.append(f"\n\n## 语气要求\n{tone_desc}")
-    user_parts.append(f"\n\n## 字数要求\n控制在{word_count}字左右")
-    user_prompt = "".join(user_parts)
-
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt},
-    ]
-
-    import requests as http_req
-
-    def generate():
-        try:
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            }
-            payload = {
-                "model": model,
-                "messages": messages,
-                "stream": True,
-                "temperature": 0.7,
-                "max_tokens": 2048,
-            }
-            resp = http_req.post(api_url, headers=headers, json=payload, stream=True, timeout=120)
-            resp.raise_for_status()
-            for line in resp.iter_lines(decode_unicode=True):
-                if not line:
-                    continue
-                if line.startswith("data: "):
-                    data_str = line[6:]
-                    if data_str.strip() == "[DONE]":
-                        yield f"data: [DONE]\n\n"
-                        break
-                    try:
-                        chunk = json.loads(data_str)
-                        delta = chunk.get("choices", [{}])[0].get("delta", {})
-                        content = delta.get("content", "")
-                        if content:
-                            yield f"data: {json.dumps(content)}\n\n"
-                    except json.JSONDecodeError:
-                        continue
-            yield f"data: [DONE]\n\n"
-        except Exception as e:
-            yield f"event: error\ndata: {json.dumps(str(e))}\n\n"
-
-    return Response(generate(), mimetype="text/event-stream")
-
-
-# =============================================================
-#  文案改写 — LLM 改写
-# =============================================================
-
-LLM_API_BASE_DEFAULT = "https://api.deepseek.com/v1"
-
-
-def _get_llm_key() -> str:
-    """从 .env 读取 LLM API Key"""
-    env_path = SPIDER_DIR / ".env"
-    if env_path.is_file():
-        import re
-        content = env_path.read_text(encoding="utf-8")
-        m = re.search(r'LLM_API_KEY\s*=\s*[\'"]?(.*?)[\'"]?\s*$', content, re.MULTILINE)
-        if m:
-            return m.group(1).strip()
-    return ""
-
-
-def _get_llm_base() -> str:
-    """从 .env 读取 LLM API Base URL"""
-    env_path = SPIDER_DIR / ".env"
-    if env_path.is_file():
-        import re
-        content = env_path.read_text(encoding="utf-8")
-        m = re.search(r'LLM_API_BASE\s*=\s*[\'"]?(.*?)[\'"]?\s*$', content, re.MULTILINE)
-        if m:
-            return m.group(1).strip().rstrip("/")
-    return LLM_API_BASE_DEFAULT
-
-
-def _save_llm_env(key: str, api_base: str = "") -> None:
-    """保存 LLM 配置到 .env"""
-    env_path = SPIDER_DIR / ".env"
-    content = ""
-    if env_path.is_file():
-        content = env_path.read_text(encoding="utf-8")
-    import re
-    if re.search(r'^LLM_API_KEY\s*=', content, re.MULTILINE):
-        content = re.sub(r'^LLM_API_KEY\s*=.*$', f'LLM_API_KEY={key}', content, count=1, flags=re.MULTILINE)
-    else:
-        content += f'\nLLM_API_KEY={key}\n'
-    if api_base:
-        if re.search(r'^LLM_API_BASE\s*=', content, re.MULTILINE):
-            content = re.sub(r'^LLM_API_BASE\s*=.*$', f'LLM_API_BASE={api_base}', content, count=1, flags=re.MULTILINE)
-        else:
-            content += f'LLM_API_BASE={api_base}\n'
-    env_path.write_text(content, encoding="utf-8")
-
-
-def _call_llm(system_prompt: str, user_text: str) -> dict:
-    """调用 OpenAI 兼容接口，返回 {"ok": True, "content": "..."} 或 {"ok": False, "error": "..."}"""
-    api_key = _get_llm_key()
-    if not api_key:
-        return {"ok": False, "error": "API Key 未配置，请先设置"}
-    base_url = _get_llm_base()
-    url = f"{base_url}/chat/completions"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "model": "deepseek-v4-flash",
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_text},
-        ],
-        "temperature": 0.7,
-        "max_tokens": 2000,
-    }
-    try:
-        import requests as req
-        resp = req.post(url, headers=headers, json=payload, timeout=60)
-        if resp.status_code == 401:
-            return {"ok": False, "error": "API Key 无效或已过期"}
-        if resp.status_code == 404:
-            return {"ok": False, "error": f"接口地址错误 (404)。请检查 LLM_API_BASE 配置"}
-        resp.raise_for_status()
-        data = resp.json()
-        content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-        if not content:
-            return {"ok": False, "error": "模型返回为空"}
-        # 过滤 thinking 标签
-        import re
-        content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-        return {"ok": True, "content": content}
-    except req.exceptions.Timeout:
-        return {"ok": False, "error": "请求超时，请稍后重试"}
-    except req.exceptions.ConnectionError:
-        return {"ok": False, "error": f"无法连接 {base_url}，请检查网络或 LLM_API_BASE 配置"}
-    except Exception as e:
-        return {"ok": False, "error": f"调用失败: {e}"}
-
-
-@app.route("/api/copy-rewrite-content")
-def copy_rewrite_content():
-    """返回文案改写的 SKILL.md 内容"""
-    skill_path = TOOLS_DIR / "文案改写" / "SKILL.md"
-    if skill_path.is_file():
-        content = skill_path.read_text(encoding="utf-8")
-        return jsonify({"ok": True, "content": content})
-    return jsonify({"ok": False, "error": "SKILL.md not found"})
-
-
-@app.route("/api/llm-status")
-def llm_status():
-    """检查 LLM API Key 是否已配置"""
-    key = _get_llm_key()
-    preview = key[:12] + "..." if len(key) > 12 else ""
-    return jsonify({"ok": True, "configured": bool(key), "preview": preview})
-
-
-@app.route("/api/save-llm-key", methods=["POST"])
-def save_llm_key():
-    """保存 LLM API Key"""
-    data = request.get_json() or request.form
-    key = (data.get("key") or "").strip()
-    api_base = (data.get("api_base") or "").strip()
-    if not key:
-        return jsonify({"ok": False, "error": "API Key 不能为空"})
-    _save_llm_env(key, api_base)
-    return jsonify({"ok": True, "message": "LLM 配置已保存"})
-
-
-@app.route("/api/rewrite-copy", methods=["POST"])
-def rewrite_copy():
-    """调用 LLM 改写文案"""
-    data = request.get_json() or request.form
-    text = (data.get("text") or "").strip()
-    if not text:
-        return jsonify({"ok": False, "error": "请输入需要改写的文案"})
-    skill_path = TOOLS_DIR / "文案改写" / "SKILL.md"
-    system_prompt = ""
-    if skill_path.is_file():
-        content = skill_path.read_text(encoding="utf-8")
-        import re
-        m = re.match(r'^---.*?---\s*(.*)', content, re.DOTALL)
-        if m:
-            system_prompt = m.group(1).strip()
-        else:
-            system_prompt = content.strip()
-    else:
-        system_prompt = "你是一个小红书文案改写助手。请将用户提供的文案改写成小红书风格：口语化、短句分行、emoji点缀、有安利感。控制在200字左右。"
-    system_prompt += "\n\n请直接输出改写后的文案，不要加解释。"
-    result = _call_llm(system_prompt, text)
-    return jsonify(result)
-
-
 #  素材库 — 博主风格浏览
 # =============================================================
 
@@ -877,6 +569,7 @@ def _scan_bloggers():
             info["category_stats"] = data.get("category_stats", {})
             info["blogger_desc"] = blogger.get("desc", "")
             info["blogger_id"] = blogger.get("bloggerId", "")
+            info["tag_freq"] = data.get("tag_freq", {})
             info["notes"] = []
             for n in data.get("notes", []):
                 info["notes"].append({
@@ -885,9 +578,11 @@ def _scan_bloggers():
                     "likes": n.get("likes", 0),
                     "collects": n.get("collects", 0),
                     "comments_count": n.get("comments_count", 0),
+                    "shares": n.get("shares", 0),
                     "tags": n.get("tags", []),
                     "category": n.get("category", ""),
                     "type": n.get("type", "normal"),
+                    "time": n.get("time", ""),
                 })
         except Exception:
             pass
@@ -1132,6 +827,201 @@ def api_blogger_html():
     except Exception:
         return "read failed", 500
     return content
+
+
+def _collect_blogger_files(blogger_name):
+    """收集博主的所有产出文件，返回 {label: filepath} 字典"""
+    files = {}
+    name = blogger_name.strip()
+    if not name:
+        return files
+
+    file_patterns = [
+        ("博主深度拆解", "_博主深度拆解.md"),
+        ("内容公式总结", "_内容公式总结.md"),
+        ("选题素材库", "_选题素材库.md"),
+        ("数据底稿", "_数据底稿.md"),
+        ("AI蒸馏任务", "_AI蒸馏任务.md"),
+        ("全量笔记结构化分析", "_全量笔记结构化分析.md"),
+        ("蒸馏报告", "_蒸馏报告.md"),
+        ("诊断报告", "_诊断报告.md"),
+    ]
+
+    search_roots = [OUTPUT_DIR, MATERIAL_BLOGGER_DIR]
+    for label, suffix in file_patterns:
+        for root in search_roots:
+            if root.is_dir():
+                matches = list(root.rglob(f"{name}{suffix}"))
+                if matches:
+                    files[label] = str(matches[0])
+                    break
+
+    for root in search_roots:
+        if root.is_dir():
+            for entry in sorted(root.iterdir()):
+                if not entry.is_dir():
+                    continue
+                if entry.name.startswith(name):
+                    skill_dir = entry / "创作指南.skill"
+                    if skill_dir.is_dir():
+                        skill_md = skill_dir / "SKILL.md"
+                        if skill_md.exists():
+                            files["创作指南"] = str(skill_md)
+                    report_dir = entry / "分析报告"
+                    if report_dir.is_dir():
+                        for md_file in sorted(report_dir.rglob("*.md")):
+                            fn = md_file.name
+                            if "诊断" in fn and "诊断报告" not in files:
+                                files["诊断报告"] = str(md_file)
+                            elif "蒸馏报告" in fn and "蒸馏报告" not in files:
+                                files["蒸馏报告"] = str(md_file)
+                            elif "深度拆解" in fn and "博主深度拆解" not in files:
+                                files["博主深度拆解"] = str(md_file)
+                            elif any(k not in files for k in ["博主深度拆解", "内容公式总结", "选题素材库"]):
+                                label = fn.replace(".md", "").replace(name, "").strip("_- ")
+                                if label:
+                                    files[label] = str(md_file)
+
+    return files
+
+
+def _build_export_html(blogger_name, files):
+    """将博主的所有产出文件合并为一个 HTML 文档"""
+    import html as html_mod
+    sections = []
+    for label, filepath in files.items():
+        try:
+            content = Path(filepath).read_text(encoding="utf-8")
+        except Exception:
+            content = f"（读取失败：{filepath}）"
+        sections.append(f'<h2 style="color:#ff6b6b;border-bottom:2px solid #ff6b6b;padding-bottom:8px;margin-top:40px">{html_mod.escape(label)}</h2>')
+        sections.append(f'<div style="white-space:pre-wrap;line-height:1.8;font-size:14px">{html_mod.escape(content)}</div>')
+
+    html_content = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>{html_mod.escape(blogger_name)} - 博主分析报告</title>
+<style>
+body {{ font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; max-width: 900px; margin: 0 auto; padding: 40px 20px; color: #333; }}
+h1 {{ color: #ff6b6b; border-bottom: 3px solid #ff6b6b; padding-bottom: 12px; }}
+h2 {{ color: #ff6b6b; border-bottom: 2px solid #ff6b6b; padding-bottom: 8px; margin-top: 40px; }}
+.meta {{ color: #999; font-size: 13px; margin-bottom: 30px; }}
+@media print {{ body {{ padding: 20px; }} h2 {{ page-break-before: auto; }} }}
+</style>
+</head>
+<body>
+<h1>{html_mod.escape(blogger_name)} - 博主分析报告</h1>
+<div class="meta">导出时间：{__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M')} | 小红书工具箱</div>
+{''.join(sections)}
+</body>
+</html>"""
+    return html_content
+
+
+def _build_export_docx(blogger_name, files):
+    """将博主的所有产出文件合并为一个 Word 文档"""
+    from docx import Document
+    from docx.shared import Pt, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = Document()
+    style = doc.styles['Normal']
+    style.font.name = 'Microsoft YaHei'
+    style.font.size = Pt(11)
+
+    title = doc.add_heading(blogger_name + ' - 博主分析报告', level=0)
+    title.runs[0].font.color.rgb = RGBColor(0xFF, 0x6B, 0x6B)
+
+    meta = doc.add_paragraph(f'导出时间：{__import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")} | 小红书工具箱')
+    meta.runs[0].font.size = Pt(9)
+    meta.runs[0].font.color.rgb = RGBColor(0x99, 0x99, 0x99)
+
+    for label, filepath in files.items():
+        try:
+            content = Path(filepath).read_text(encoding="utf-8")
+        except Exception:
+            content = f"（读取失败：{filepath}）"
+
+        h = doc.add_heading(label, level=1)
+        for run in h.runs:
+            run.font.color.rgb = RGBColor(0xFF, 0x6B, 0x6B)
+
+        for line in content.split("\n"):
+            line = line.strip()
+            if line.startswith("# "):
+                h2 = doc.add_heading(line[2:], level=2)
+            elif line.startswith("## "):
+                doc.add_heading(line[3:], level=3)
+            elif line.startswith("### "):
+                doc.add_heading(line[4:], level=4)
+            elif line.startswith("- ") or line.startswith("* "):
+                doc.add_paragraph(line[2:], style='List Bullet')
+            elif line:
+                doc.add_paragraph(line)
+
+    return doc
+
+
+@app.route("/api/export/blogger", methods=["POST"])
+def export_blogger():
+    """导出博主分析报告为 HTML / Word / PDF"""
+    data = request.get_json() or request.form
+    blogger_name = (data.get("name") or "").strip()
+    fmt = (data.get("format") or "html").strip().lower()
+
+    if not blogger_name:
+        return jsonify({"ok": False, "error": "请提供博主名称"})
+
+    files = _collect_blogger_files(blogger_name)
+    if not files:
+        return jsonify({"ok": False, "error": f"未找到博主「{blogger_name}」的分析结果"})
+
+    if fmt == "html":
+        html_content = _build_export_html(blogger_name, files)
+        export_dir = OUTPUT_DIR / "导出报告"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        export_path = export_dir / f"{blogger_name}_分析报告.html"
+        export_path.write_text(html_content, encoding="utf-8")
+        return jsonify({"ok": True, "path": str(export_path), "format": "html"})
+
+    elif fmt == "word":
+        try:
+            from docx import Document
+        except ImportError:
+            return jsonify({"ok": False, "error": "缺少 python-docx 库，请运行: python -m pip install python-docx"})
+        doc = _build_export_docx(blogger_name, files)
+        export_dir = OUTPUT_DIR / "导出报告"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        export_path = export_dir / f"{blogger_name}_分析报告.docx"
+        doc.save(str(export_path))
+        return jsonify({"ok": True, "path": str(export_path), "format": "word"})
+
+    elif fmt == "pdf":
+        html_content = _build_export_html(blogger_name, files)
+        export_dir = OUTPUT_DIR / "导出报告"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        html_path = export_dir / f"{blogger_name}_分析报告_打印.html"
+        html_path.write_text(html_content, encoding="utf-8")
+        return jsonify({"ok": True, "path": str(html_path), "format": "pdf", "hint": "已生成 HTML 报告，请在浏览器中打开后使用 Ctrl+P 打印为 PDF"})
+
+    else:
+        return jsonify({"ok": False, "error": f"不支持的格式: {fmt}"})
+
+
+@app.route("/api/export/download")
+def export_download():
+    """下载导出的文件"""
+    filepath = request.args.get("path", "")
+    if not filepath:
+        return "no path", 400
+    full_path = Path(filepath).resolve()
+    if not str(full_path).startswith(str(ROOT.resolve())):
+        return "access denied", 403
+    if not full_path.is_file():
+        return "file not found", 404
+    from flask import send_file
+    return send_file(str(full_path), as_attachment=True)
 
 
 # =============================================================
@@ -1464,6 +1354,11 @@ def check_env():
         except ImportError:
             checks[f"pkg_{pkg}"] = "MISSING"
     return jsonify({"ok": True, "checks": checks})
+
+
+@app.route("/api/health")
+def health_check():
+    return jsonify({"ok": True, "status": "running", "port": int(os.environ.get("XHS_PORT", 5001))})
 
 
 # =============================================================
@@ -1989,8 +1884,24 @@ if __name__ == "__main__":
     print(" 小红书工具箱 — 统一 Web 入口")
     print("=" * 50)
     print(f" 启动: http://localhost:{PORT}")
-    print(f" 工具: 博主分析 / 帖子深挖 / 文案改写")
+    print(f" 工具: 博主分析 / 帖子深挖")
     print(f" 素材库: {MATERIAL_DIR.resolve()}")
     print(f" 产出: {OUTPUT_DIR.resolve()}")
     print("=" * 50)
+
+    def open_browser():
+        import urllib.request
+        for i in range(30):
+            try:
+                urllib.request.urlopen(f"http://localhost:{PORT}/api/health", timeout=1)
+                import webbrowser
+                webbrowser.open(f"http://localhost:{PORT}")
+                print(f"  ✅ 浏览器已自动打开")
+                return
+            except Exception:
+                time.sleep(0.5)
+        print(f"  ⚠️ 浏览器未自动打开，请手动访问 http://localhost:{PORT}")
+
+    threading.Thread(target=open_browser, daemon=True).start()
+
     app.run(host="0.0.0.0", port=PORT, debug=False, threaded=True)

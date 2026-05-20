@@ -149,7 +149,16 @@ class RAGEngine:
 
         context = "\n\n---\n\n".join(context_parts)
 
-        result = self._call_llm(question, context)
+        system_prompt = """你是一个粗趣品牌知识助手。粗趣是深圳本地社交活动平台，提供桌游、派对、户外等线下社交活动。
+
+请根据以下知识库内容回答用户的问题。要求：
+1. 只基于知识库内容回答，不要编造信息
+2. 如果知识库中找不到相关信息，请说"知识库中没有相关信息"
+3. 回答简洁、口语化
+4. 适当引用具体的数据或例子"""
+        user_prompt = f"知识库内容：\n{context}\n\n用户问题：{question}"
+
+        result = self._call_llm(system_prompt, user_prompt)
 
         if result.get("ok"):
             return {
@@ -158,6 +167,46 @@ class RAGEngine:
                 "sources": list(seen_sources)[:3],
             }
         return {"ok": False, "error": result.get("error", "LLM 调用失败")}
+
+    def retrieve(self, question: str, top_k: int = 3) -> list[dict]:
+        """检索相关片段，不调用 LLM，返回原始内容"""
+        if not self.ready and not self.load_knowledge_base():
+            return []
+
+        q_tokens = _tokenize(question)
+        q_tf = Counter(q_tokens)
+        q_vec = {}
+        for word, tf in q_tf.items():
+            if word in self.idf:
+                q_vec[word] = (1 + math.log(tf)) * self.idf[word]
+
+        scores = []
+        q_norm = math.sqrt(sum(v * v for v in q_vec.values()))
+        if q_norm == 0:
+            return []
+
+        for doc_vec in self.doc_vectors:
+            dot = sum(q_vec.get(w, 0) * doc_vec.get(w, 0) for w in set(q_vec) & set(doc_vec))
+            d_norm = math.sqrt(sum(v * v for v in doc_vec.values()))
+            scores.append(dot / (q_norm * d_norm) if d_norm > 0 else 0)
+
+        top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
+
+        results = []
+        for idx in top_indices:
+            if scores[idx] < 0.05:
+                continue
+            results.append({
+                "title": self.chunks[idx]["title"],
+                "content": self.chunks[idx]["content"],
+                "source": self.chunks[idx]["source"],
+                "score": round(scores[idx], 3),
+            })
+        return results
+
+    def generate(self, system_prompt: str, user_prompt: str, temperature: float = 0.7) -> dict:
+        """用 LLM 生成内容（自定义 prompt），供外部调用"""
+        return self._call_llm(system_prompt, user_prompt, temperature)
 
     def status(self) -> dict:
         return {"ready": self.ready, "chunks": len(self.chunks)}

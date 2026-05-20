@@ -6,3 +6,4 @@ loguru>=0.7
 retry>=0.9
 PyExecJS>=1.5
 python-dotenv>=1.0
+python-docx>=1.0

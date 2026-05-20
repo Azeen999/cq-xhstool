@@ -121,6 +121,7 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
 .blogger-header .bh-stat { text-align: center; }
 .blogger-header .bh-stat-val { font-size: 18px; font-weight: 700; color: #ff6b6b; }
 .blogger-header .bh-stat-label { font-size: 11px; color: #999; }
+.blogger-header .bh-export { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 .detail-tabs { display: flex; gap: 0; border-bottom: 2px solid #f0f0f5; margin-bottom: 16px; }
 .detail-tab { padding: 8px 16px; font-size: 13px; font-weight: 500; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; color: #888; transition: all .15s; }
 .detail-tab:hover { color: #333; }
@@ -196,35 +197,7 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
   .blogger-list { width: 100%; max-height: 200px; }
 }
 
-/* ── Rewrite View ── */
-.rewrite-view { display: flex; gap: 16px; height: calc(100vh - 120px); }
-.rewrite-params { width: 280px; overflow-y: auto; background: #fff; border-radius: 12px; padding: 16px; flex-shrink: 0; }
-.rp-section { margin-bottom: 16px; }
-.rp-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
-.rp-select { width: 100%; padding: 8px 10px; border: 1px solid #e8e8ed; border-radius: 8px; font-size: 13px; background: #f9f9fb; outline: none; }
-.rp-select:focus { border-color: #ff6b6b; }
-.rp-preview { font-size: 11px; color: #888; margin-top: 4px; max-height: 60px; overflow: hidden; line-height: 1.4; }
-.rp-range { width: 100%; accent-color: #ff6b6b; }
-.rp-range-labels { display: flex; justify-content: space-between; font-size: 10px; color: #bbb; margin-top: 2px; }
-.rp-input { width: 100%; padding: 8px 10px; border: 1px solid #e8e8ed; border-radius: 8px; font-size: 12px; background: #f9f9fb; outline: none; margin-bottom: 6px; box-sizing: border-box; }
-.rp-input:focus { border-color: #ff6b6b; }
-.rp-btn { width: 100%; padding: 12px; background: linear-gradient(135deg,#ff6b6b,#ee5a9b); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .15s; }
-.rp-btn:hover { opacity: .9; transform: translateY(-1px); }
-.rp-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
-.rewrite-main { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-.rm-input { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.rm-output { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-.rm-label { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
-.rm-textarea { flex: 1; padding: 12px; border: 1px solid #e8e8ed; border-radius: 10px; font-size: 13px; line-height: 1.6; resize: none; outline: none; background: #fff; font-family: inherit; }
-.rm-textarea:focus { border-color: #ff6b6b; }
-.rm-result { flex: 1; padding: 12px; border: 1px solid #e8e8ed; border-radius: 10px; font-size: 13px; line-height: 1.8; overflow-y: auto; background: #f9f9fb; white-space: pre-wrap; }
-.rm-result .md-content { font-size: 13px; line-height: 1.8; }
-.rm-copy-btn { font-size: 11px; padding: 2px 10px; border: 1px solid #e8e8ed; border-radius: 6px; background: #fff; cursor: pointer; color: #888; }
-.rm-copy-btn:hover { border-color: #ff6b6b; color: #ff6b6b; }
-
 @media (max-width: 768px) {
-  .rewrite-view { flex-direction: column; }
-  .rewrite-params { width: 100%; max-height: 300px; }
 }
 
 /* ── Post Dive View ── */
@@ -262,7 +235,32 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
   background: #fff; color: #007aff; cursor: pointer; text-decoration: none;
 }
 .history-file .hf-actions button:hover, .history-file .hf-actions a:hover { background: #f0f0f5; }
+/* ── Visualization Styles ── */
+.viz-section { margin-bottom: 20px; }
+.viz-section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #f0f0f5; }
+.viz-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.viz-card { background: #f9f9fb; border-radius: 10px; padding: 14px; border: 1px solid #e8e8ed; }
+.viz-card h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: #555; }
+.viz-card canvas { width: 100% !important; max-height: 260px; }
+.viz-card-full { grid-column: 1 / -1; }
+
+/* ── Notes Table ── */
+.notes-table-wrap { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+.notes-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.notes-table th { position: sticky; top: 0; background: #f0f0f5; z-index: 1; padding: 8px 10px; text-align: left; border-bottom: 2px solid #ddd; white-space: nowrap; cursor: pointer; user-select: none; }
+.notes-table th:hover { background: #e8e8ed; }
+.notes-table th .sort-arrow { color: #999; margin-left: 4px; }
+.notes-table td { padding: 6px 10px; border-bottom: 1px solid #f0f0f5; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.notes-table tr:hover { background: #fff5f5; }
+.notes-table .nt-title { max-width: 300px; }
+.notes-table .nt-num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ── Tag Cloud ── */
+.tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px; align-items: center; justify-content: center; min-height: 200px; }
+.tag-cloud .tc-item { display: inline-block; padding: 4px 14px; border-radius: 20px; cursor: pointer; transition: all .15s; color: #fff; font-weight: 500; }
+.tag-cloud .tc-item:hover { transform: scale(1.1); filter: brightness(1.1); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -276,7 +274,6 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
   <a class="nav-item" data-tab="keyword-search"><span>关键词搜索</span></a>
   <a class="nav-item" data-tab="hot-feed"><span>热门推荐</span></a>
   <a class="nav-item" data-tab="user-search"><span>用户搜索</span></a>
-  <a class="nav-item" data-tab="copy-rewrite"><span>文案改写</span></a>
   <div class="cat-label">🤖 AI</div>
   <a class="nav-item" data-tab="rag-qa"><span>粗趣问答</span></a>
   <div class="cat-label">📚 素材库</div>
@@ -294,7 +291,6 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
     <span id="env-node"><span class="env-dot"></span>Node</span>
     <span id="env-spider"><span class="env-dot"></span>Spider_XHS</span>
     <span id="env-cookie" style="cursor:pointer" title="点击管理 Cookie"><span class="env-dot"></span>Cookie</span>
-    <span id="env-llm" style="cursor:pointer" title="点击配置 AI API Key"><span class="env-dot"></span>AI</span>
     <span style="margin-left:auto;font-size:12px;color:#999" id="status-text">就绪</span>
     <button class="btn" id="btn-stop" style="display:none;background:#ff453a;color:#fff;font-size:12px;padding:4px 14px" onclick="stopTask()">⏹ 终止</button>
   </div>
@@ -590,59 +586,6 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
       </div>
     </div>
 
-    <!-- ════ 文案改写 ════ -->
-    <div class="tab-content" id="tab-copy-rewrite">
-      <div class="card">
-        <h3>文案改写</h3>
-        <p>粘贴原始文案，按参考风格自动改写</p>
-      </div>
-      <div class="rewrite-view">
-        <div class="rewrite-params">
-          <div class="rp-section">
-            <div class="rp-title">📖 改写规则</div>
-            <details>
-              <summary style="cursor:pointer;font-size:12px;color:#007aff">点击查看风格指南</summary>
-              <div class="skill-display" id="skill-content" style="margin-top:6px;font-size:12px;padding:10px;max-height:300px;overflow-y:auto"></div>
-            </details>
-          </div>
-          <div class="rp-section">
-            <div class="rp-title">📋 内容类型（可选）</div>
-            <select id="rw-activity" class="rp-select">
-              <option value="">不指定</option>
-              <option value="活动招募">活动招募</option>
-              <option value="活动回顾">活动回顾</option>
-              <option value="情绪共鸣">情绪共鸣</option>
-              <option value="干货攻略">干货攻略</option>
-              <option value="产品安利">产品安利</option>
-              <option value="个人分享">个人分享</option>
-            </select>
-          </div>
-          <div class="rp-section">
-            <div class="rp-title">📏 字数控制 <span id="rw-word-val" style="color:#ff6b6b">200</span>字</div>
-            <input type="range" id="rw-wordcount" min="80" max="500" value="200" step="10" class="rp-range">
-          </div>
-          <div class="rp-section" style="font-size:12px;color:#999">
-            <span id="env-llm-status">AI 状态：检查中...</span>
-          </div>
-          <button id="rw-generate-btn" class="rp-btn" onclick="startRewrite()">
-            ✨ 生成文案
-          </button>
-        </div>
-        <div class="rewrite-main">
-          <div class="rm-input">
-            <div class="rm-label">📝 参考文案</div>
-            <textarea id="rw-input" class="rm-textarea" placeholder="粘贴你想改写的文案或活动信息..."></textarea>
-          </div>
-          <div class="rm-output">
-            <div class="rm-label">✅ 生成结果 <button id="rw-copy-btn" class="rm-copy-btn" style="display:none" onclick="copyRewriteResult()">复制</button></div>
-            <div id="rw-output" class="rm-result">
-              <div style="color:#999;font-size:13px;text-align:center;padding:30px">生成结果将显示在这里</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ════ 粗趣 RAG 问答 ════ -->
     <div class="tab-content" id="tab-rag-qa">
       <div class="card" style="display:flex;flex-direction:column;height:calc(100vh - 100px);padding:0;overflow:hidden">
@@ -765,35 +708,7 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
   </div>
 </div>
 
-<!-- ════ AI 配置 Modal ════ -->
-<div class="modal-overlay" id="llm-modal">
-  <div class="modal" style="max-width:600px;width:90vw;height:auto;max-height:60vh">
-    <div class="modal-header">
-      <h3>🤖 AI 配置</h3>
-      <span class="modal-close" onclick="closeLlmModal()">&times;</span>
-    </div>
-    <div class="modal-body">
-      <div style="font-size:13px;line-height:1.6">
-        <p style="margin-bottom:12px;color:#666">
-          配置 LLM API Key 用于文案改写。默认使用 DeepSeek，也支持其他 OpenAI 兼容接口。
-        </p>
-        <div style="margin-bottom:12px">
-          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">API Key</label>
-          <input type="password" id="llm-key-input" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px;font-family:SF Mono,Menlo,monospace" placeholder="sk-...">
-        </div>
-        <div style="margin-bottom:12px">
-          <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">API Base URL（可选，默认使用 DeepSeek）</label>
-          <input type="text" id="llm-base-input" style="width:100%;padding:10px;border:1px solid #d2d2d7;border-radius:8px;font-size:13px" placeholder="https://api.deepseek.com/v1">
-        </div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn btn-outline" onclick="closeLlmModal()">取消</button>
-          <button class="btn btn-primary" id="btn-save-llm" onclick="saveLlmKey()">💾 保存</button>
-        </div>
-        <div id="llm-save-result" style="margin-top:8px;font-size:13px"></div>
-      </div>
-    </div>
-  </div>
-</div>
+
 
 <script>
 // ══════════════════════════════════════════
@@ -817,7 +732,6 @@ document.querySelectorAll('.nav-item').forEach(el => {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     el.classList.add('active');
     document.getElementById('tab-' + el.dataset.tab).classList.add('active');
-    if (el.dataset.tab === 'copy-rewrite') { loadSkillContent(); checkLlmStatus(); }
     if (el.dataset.tab === 'material-blogger') loadMaterialBlogger();
     if (el.dataset.tab === 'material-self') loadMaterialSelf();
     if (el.dataset.tab === 'post-dive') loadPostDiveHistory();
@@ -1866,141 +1780,6 @@ async function openKsHistory(path) {
 //  文案改写
 // ══════════════════════════════════════════
 
-let _rewriteRunning = false;
-
-document.getElementById('rw-wordcount').oninput = function() {
-  document.getElementById('rw-word-val').textContent = this.value;
-};
-
-async function loadSkillContent() {
-  const el = document.getElementById('skill-content');
-  el.textContent = '加载中...';
-  try {
-    const r = await fetch('/api/copy-rewrite-content');
-    const data = await r.json();
-    el.textContent = data.content || '未找到内容';
-  } catch { el.textContent = '加载失败'; }
-}
-
-async function startRewrite() {
-  if (_rewriteRunning) return;
-  const text = document.getElementById('rw-input').value.trim();
-  if (!text) { alert('请输入需要改写的文案'); return; }
-  const btn = document.getElementById('rw-generate-btn');
-  const outputEl = document.getElementById('rw-output');
-  const copyBtn = document.getElementById('rw-copy-btn');
-
-  btn.disabled = true;
-  btn.textContent = '⏳ 生成中...';
-  _rewriteRunning = true;
-  outputEl.innerHTML = '';
-  copyBtn.style.display = 'none';
-
-  try {
-    const r = await fetch('/api/rewrite-copy', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text}),
-    });
-    const data = await r.json();
-    if (data.ok) {
-      outputEl.innerHTML = '<div class="md-content">' + renderMarkdown(data.content) + '</div>';
-      copyBtn.style.display = '';
-    } else {
-      outputEl.textContent = '❌ ' + (data.error || '改写失败');
-    }
-  } catch (err) {
-    outputEl.textContent = '❌ 网络错误: ' + err.message;
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '✨ 生成文案';
-    _rewriteRunning = false;
-  }
-}
-
-function copyRewriteResult() {
-  const el = document.getElementById('rw-output');
-  const text = el.innerText || el.textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('rw-copy-btn');
-    btn.textContent = '已复制 ✓';
-    setTimeout(() => { btn.textContent = '复制'; }, 1500);
-  });
-}
-
-// ── AI 状态 & 配置 ──
-async function checkLlmStatus() {
-  const dot = document.querySelector('#env-llm .env-dot');
-  const statusEl = document.getElementById('env-llm-status');
-  try {
-    const r = await fetch('/api/llm-status');
-    const data = await r.json();
-    if (data.configured) {
-      dot.className = 'env-dot ok';
-      if (statusEl) statusEl.innerHTML = 'AI 状态：<span style="color:#30d158">✅ 已配置</span>';
-    } else {
-      dot.className = 'env-dot warn';
-      if (statusEl) statusEl.innerHTML = 'AI 状态：<span style="color:#ff9f0a">⚠️ 未配置</span> <a style="cursor:pointer;color:#007aff" onclick="openLlmModal()">去配置</a>';
-    }
-  } catch {
-    dot.className = 'env-dot fail';
-    if (statusEl) statusEl.textContent = 'AI 状态：检查失败';
-  }
-}
-
-document.getElementById('env-llm').addEventListener('click', openLlmModal);
-
-function openLlmModal() {
-  document.getElementById('llm-modal').classList.add('show');
-  document.getElementById('llm-save-result').textContent = '';
-  // 预填已有 key
-  fetch('/api/llm-status').then(r => r.json()).then(data => {
-    if (data.configured) {
-      document.getElementById('llm-key-input').placeholder = '已配置，输入新值覆盖';
-    }
-  }).catch(() => {});
-}
-
-function closeLlmModal() {
-  document.getElementById('llm-modal').classList.remove('show');
-}
-
-document.getElementById('llm-modal').addEventListener('click', (e) => {
-  if (e.target === e.currentTarget) closeLlmModal();
-});
-
-async function saveLlmKey() {
-  const key = document.getElementById('llm-key-input').value.trim();
-  if (!key) { alert('请输入 API Key'); return; }
-  const btn = document.getElementById('btn-save-llm');
-  btn.disabled = true;
-  btn.textContent = '⏳ 保存中...';
-  const resultEl = document.getElementById('llm-save-result');
-  try {
-    const r = await fetch('/api/save-llm-key', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({key}),
-    });
-    const data = await r.json();
-    if (data.ok) {
-      resultEl.innerHTML = '<span style="color:#30d158">✅ ' + data.message + '</span>';
-      document.getElementById('llm-key-input').value = '';
-      checkLlmStatus();
-      setTimeout(closeLlmModal, 1000);
-    } else {
-      resultEl.innerHTML = '<span style="color:#ff453a">❌ ' + (data.error || '保存失败') + '</span>';
-    }
-  } catch (err) {
-    resultEl.innerHTML = '<span style="color:#ff453a">❌ ' + err.message + '</span>';
-  }
-  btn.disabled = false;
-  btn.textContent = '💾 保存';
-}
-
-// 页面加载时检查 AI 状态
-checkLlmStatus();
-
 // ══════════════════════════════════════════
 //  写作库 — 树形浏览
 // ══════════════════════════════════════════
@@ -2111,6 +1890,7 @@ async function selectBlogger(name) {
     const data = await r.json();
     if (!data.ok) throw new Error(data.error);
     renderBloggerDetail(data.blogger, detailEl);
+    renderBloggerCharts(data.blogger);
   } catch (err) {
     detailEl.innerHTML = `<div style="padding:40px;text-align:center;color:#ff453a">加载失败: ${err.message}</div>`;
   }
@@ -2192,6 +1972,12 @@ function renderBloggerDetail(b, el) {
           <div class="bh-stat"><div class="bh-stat-val">${b.total_comments}</div><div class="bh-stat-label">总评论</div></div>
         </div>
       </div>
+      <div class="bh-export">
+        <span style="font-size:12px;color:#999;margin-right:4px">导出报告</span>
+        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px" onclick="exportBlogger('${escapeHtml(b.name)}','html')">HTML</button>
+        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px" onclick="exportBlogger('${escapeHtml(b.name)}','word')">Word</button>
+        <button class="btn btn-outline" style="font-size:11px;padding:4px 10px" onclick="exportBlogger('${escapeHtml(b.name)}','pdf')">PDF</button>
+      </div>
     </div>
     ${catBars ? `<div style="margin-bottom:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">📂 内容领域</div>${catBars}</div>` : ''}
     <div class="detail-tabs">${tabsHtml}</div>
@@ -2204,6 +1990,28 @@ function renderBloggerDetail(b, el) {
         <div class="stat-item"><div class="si-val">${b.total_collects}</div><div class="si-label">总收藏</div></div>
         <div class="stat-item"><div class="si-val">${b.total_comments}</div><div class="si-label">总评论</div></div>
       </div>
+      ${b.notes && b.notes.length ? `
+      <div class="viz-section">
+        <div class="viz-section-title">📊 数据可视化</div>
+        <div class="viz-grid">
+          <div class="viz-card viz-card-full">
+            <h4>📝 笔记列表</h4>
+            <div class="notes-table-wrap" id="notes-table-${bloggerId(b.name)}"></div>
+          </div>
+          <div class="viz-card viz-card-full">
+            <h4>🏷️ 标签云</h4>
+            <div class="tag-cloud" id="tag-cloud-${bloggerId(b.name)}"></div>
+          </div>
+          <div class="viz-card">
+            <h4>🕐 发布时间分布</h4>
+            <canvas id="time-chart-${bloggerId(b.name)}"></canvas>
+          </div>
+          <div class="viz-card">
+            <h4>📂 内容类型占比</h4>
+            <canvas id="category-chart-${bloggerId(b.name)}"></canvas>
+          </div>
+        </div>
+      </div>` : ''}
       <div id="data-md-content" class="md-content">${hasData ? '加载中...' : '<div style="color:#999;font-size:13px;text-align:center;padding:20px">暂无详细数据报告</div>'}</div>
     </div>
     ${hasStyle ? '<div class="detail-panel" id="panel-style"><div class="md-content" id="style-md-content">加载中...</div></div>' : ''}
@@ -2250,6 +2058,26 @@ function togglePostContent(card) {
   content.style.display = content.style.display === 'none' ? '' : 'none';
 }
 
+async function exportBlogger(name, format) {
+  try {
+    const r = await fetch('/api/export/blogger', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, format}),
+    });
+    const data = await r.json();
+    if (!data.ok) { alert('导出失败: ' + (data.error || '未知错误')); return; }
+    if (format === 'pdf' && data.hint) {
+      window.open('/api/export/download?path=' + encodeURIComponent(data.path), '_blank');
+      alert(data.hint);
+    } else {
+      window.open('/api/export/download?path=' + encodeURIComponent(data.path), '_blank');
+    }
+  } catch (err) {
+    alert('导出失败: ' + err.message);
+  }
+}
+
 async function loadMdContent(elId, filePath) {
   const el = document.getElementById(elId);
   if (!el || el.dataset.loaded) return;
@@ -2264,7 +2092,198 @@ async function loadMdContent(elId, filePath) {
   }
 }
 
+function bloggerId(name) { return name.replace(/[^a-zA-Z0-9一-鿿]/g, '_'); }
+
+function renderBloggerCharts(b) {
+  const id = bloggerId(b.name);
+  renderNotesTable(b.notes, 'notes-table-' + id);
+  renderTagCloud(b.tag_freq || b.notes, 'tag-cloud-' + id);
+  renderTimeChart(b.notes, 'time-chart-' + id);
+  renderCategoryChart(b.category_stats || (b.notes || []).reduce((acc, n) => {
+    if (n.type) { acc[n.type] = (acc[n.type] || 0) + 1; }
+    return acc;
+  }, {}), 'category-chart-' + id);
+}
+
+/* ── Notes Table ── */
+function renderNotesTable(notes, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  let sortField = 'likes', sortDir = -1;
+  let render = () => {
+    const sorted = [...notes].sort((a, b) => {
+      let va = a[sortField] || 0, vb = b[sortField] || 0;
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      if (va < vb) return -1 * sortDir;
+      if (va > vb) return 1 * sortDir;
+      return 0;
+    });
+    const arrow = (f) => sortField === f ? (sortDir === -1 ? ' ▼' : ' ▲') : '';
+    let html = '<table class="notes-table"><thead><tr>' +
+      '<th onclick="sortNotesTable(\'' + containerId + '\',\'title\')">标题<span class="sort-arrow">' + arrow('title') + '</span></th>' +
+      '<th onclick="sortNotesTable(\'' + containerId + '\',\'likes\')">❤️ 点赞<span class="sort-arrow">' + arrow('likes') + '</span></th>' +
+      '<th onclick="sortNotesTable(\'' + containerId + '\',\'collects\')">⭐ 收藏<span class="sort-arrow">' + arrow('collects') + '</span></th>' +
+      '<th onclick="sortNotesTable(\'' + containerId + '\',\'comments_count\')">💬 评论<span class="sort-arrow">' + arrow('comments_count') + '</span></th>' +
+      '<th onclick="sortNotesTable(\'' + containerId + '\',\'shares\')">🔄 分享<span class="sort-arrow">' + arrow('shares') + '</span></th>' +
+      '</tr></thead><tbody>';
+    for (const n of sorted) {
+      html += '<tr><td class="nt-title" title="' + escapeHtml(n.title) + '">' + escapeHtml(n.title) + '</td>' +
+        '<td class="nt-num">' + (n.likes || 0) + '</td>' +
+        '<td class="nt-num">' + (n.collects || 0) + '</td>' +
+        '<td class="nt-num">' + (n.comments_count || 0) + '</td>' +
+        '<td class="nt-num">' + (n.shares || 0) + '</td></tr>';
+    }
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  };
+  window['_nt_sort_' + containerId] = (field) => {
+    if (sortField === field) sortDir *= -1;
+    else { sortField = field; sortDir = -1; }
+    render();
+  };
+  render();
+}
+/* sort helper called from onclick */
+function sortNotesTable(containerId, field) {
+  const fn = window['_nt_sort_' + containerId];
+  if (fn) fn(field);
+}
+
+/* ── Tag Cloud ── */
+function renderTagCloud(source, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  let tagFreq = {};
+  if (Array.isArray(source)) {
+    for (const n of source) {
+      if (n.tags && Array.isArray(n.tags)) {
+        for (const t of n.tags) {
+          const tag = t.trim();
+          if (tag) tagFreq[tag] = (tagFreq[tag] || 0) + 1;
+        }
+      }
+    }
+  } else if (typeof source === 'object') {
+    tagFreq = source;
+  }
+  const entries = Object.entries(tagFreq).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) {
+    el.innerHTML = '<div style="color:#999;font-size:13px">暂无标签数据</div>';
+    return;
+  }
+  const maxFreq = entries[0][1];
+  const minFreq = entries[entries.length - 1][1];
+  const palette = ['#ff6b6b','#ee5a9b','#ff9f0a','#30d158','#5ac8fa','#007aff','#af52de','#ff6482','#00c7be','#ffb340'];
+  let html = '';
+  for (const [tag, count] of entries.slice(0, 60)) {
+    const size = maxFreq === minFreq ? 1 : 0.7 + 1.3 * (count - minFreq) / (maxFreq - minFreq);
+    const color = palette[Math.floor(Math.random() * palette.length)];
+    const fontSize = Math.round(12 + size * 18);
+    html += '<span class="tc-item" style="font-size:' + fontSize + 'px;background:' + color + '" title="出现 ' + count + ' 次">#' + escapeHtml(tag) + '</span>';
+  }
+  el.innerHTML = html;
+}
+
+/* ── Time Distribution Chart ── */
+let _timeChartInstances = {};
+let _categoryChartInstances = {};
+function renderTimeChart(notes, canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  // Destroy existing chart
+  if (_timeChartInstances[canvasId]) { _timeChartInstances[canvasId].destroy(); }
+  // Parse timestamps, group by hour
+  const hourCount = {};
+  for (const n of notes) {
+    if (!n.time) continue;
+    let date = null;
+    if (typeof n.time === 'number') date = new Date(n.time * 1000);
+    else if (typeof n.time === 'string' && /^\d{10}$/.test(n.time)) date = new Date(parseInt(n.time) * 1000);
+    else if (typeof n.time === 'string') date = new Date(n.time);
+    if (date && !isNaN(date)) {
+      const h = date.getHours();
+      hourCount[h] = (hourCount[h] || 0) + 1;
+    }
+  }
+  const labels = Array.from({length: 24}, (_, i) => i + ':00');
+  const data = Array.from({length: 24}, (_, i) => hourCount[i] || 0);
+  if (data.every(v => v === 0)) {
+    canvas.parentElement.innerHTML = '<div style="color:#999;font-size:13px;text-align:center;padding:20px">暂无发布时间数据</div>';
+    return;
+  }
+  _timeChartInstances[canvasId] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: '发布数量',
+        data,
+        backgroundColor: '#ff6b6b',
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { beginAtZero: true, grid: { color: '#f0f0f5' }, ticks: { font: { size: 10 }, stepSize: 1 } }
+      }
+    }
+  });
+}
+
+/* ── Category Pie Chart ── */
+function renderCategoryChart(categoryStats, canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (_categoryChartInstances[canvasId]) { _categoryChartInstances[canvasId].destroy(); }
+  let entries;
+  if (Array.isArray(categoryStats)) {
+    entries = categoryStats.map(c => [c.name || c.type || '', c.count || c.pct || 0]);
+  } else if (typeof categoryStats === 'object') {
+    entries = Object.entries(categoryStats).map(([k, v]) => [k, typeof v === 'object' ? (v.count || v.pct || 0) : v]);
+  } else {
+    entries = [];
+  }
+  entries = entries.filter(([, v]) => v > 0);
+  if (entries.length === 0) {
+    canvas.parentElement.innerHTML = '<div style="color:#999;font-size:13px;text-align:center;padding:20px">暂无分类数据</div>';
+    return;
+  }
+  const palette = ['#ff6b6b','#ee5a9b','#ff9f0a','#30d158','#5ac8fa','#007aff','#af52de','#ff6482','#00c7be','#ffb340','#888','#666'];
+  _categoryChartInstances[canvasId] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(([k]) => k),
+      datasets: [{
+        data: entries.map(([, v]) => v),
+        backgroundColor: entries.map((_, i) => palette[i % palette.length]),
+        borderWidth: 1,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 }, padding: 12 }
+        }
+      }
+    }
+  });
+}
+
 function loadTabContent(tab, blogger) {
+  if (tab === 'data') {
+    renderBloggerCharts(blogger);
+  }
   const mapping = {
     'data': 'data-md-content',
     'style': 'style-md-content',
