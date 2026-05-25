@@ -4,17 +4,6 @@
 小红书博主风格分析器 - 一键运行入口
 使用本地爬虫获取博主数据，无需 TikHub Token
 """
-import subprocess
-
-_original_popen_init = subprocess.Popen.__init__
-
-def _patched_popen_init(self, *args, **kwargs):
-    if kwargs.get('universal_newlines') or kwargs.get('text'):
-        kwargs.setdefault('encoding', 'utf-8')
-    return _original_popen_init(self, *args, **kwargs)
-
-subprocess.Popen.__init__ = _patched_popen_init
-
 import os
 import sys
 import argparse
@@ -22,6 +11,10 @@ import random
 import time
 import json
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "博主蒸馏" / "scripts" / "utils"))
+from utils.common import patch_subprocess_utf8
+patch_subprocess_utf8()
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')

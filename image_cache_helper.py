@@ -16,14 +16,25 @@ def _ensure_cache_dir():
 
 
 def _url_to_filename(url: str) -> str:
-    """用 URL 的 MD5 作为缓存文件名"""
-    return hashlib.md5(url.encode("utf-8")).hexdigest() + ".jpg"
+    """用 URL 的 MD5 作为缓存文件名，保留原始后缀"""
+    ext = Path(url.split("?")[0]).suffix or ".jpg"
+    if ext not in (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"):
+        ext = ".jpg"
+    return hashlib.md5(url.encode("utf-8")).hexdigest() + ext
 
 
 def get_cached_path(url: str) -> str:
-    """获取缓存文件路径（如果已缓存），否则返回 None"""
+    """获取缓存文件路径（如果已缓存），否则返回 None。
+    兼容旧缓存（统一 .jpg 后缀）和新缓存（保留原始后缀）。
+    """
     fpath = CACHE_DIR / _url_to_filename(url)
-    return str(fpath) if fpath.is_file() else ""
+    if fpath.is_file():
+        return str(fpath)
+    md5_prefix = hashlib.md5(url.encode("utf-8")).hexdigest()
+    for f in CACHE_DIR.glob(f"{md5_prefix}.*"):
+        if f.is_file():
+            return str(f)
+    return ""
 
 
 def cache_image(url: str) -> str | None:

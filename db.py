@@ -13,6 +13,9 @@ from datetime import datetime
 DB_DIR = Path(__file__).resolve().parent / "output"
 DB_PATH = DB_DIR / "toolbox.db"
 
+_db_initialized = False
+_db_init_lock = threading.Lock()
+
 
 def get_conn():
     DB_DIR.mkdir(parents=True, exist_ok=True)
@@ -24,8 +27,14 @@ def get_conn():
 
 
 def init_db():
-    conn = get_conn()
-    conn.executescript("""
+    global _db_initialized
+    if _db_initialized:
+        return
+    with _db_init_lock:
+        if _db_initialized:
+            return
+        conn = get_conn()
+        conn.executescript("""
         CREATE TABLE IF NOT EXISTS search_sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             keyword TEXT NOT NULL,
@@ -81,8 +90,9 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_notes_keyword ON notes(nickname);
         CREATE INDEX IF NOT EXISTS idx_comments_note ON comments(note_db_id);
     """)
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
+        _db_initialized = True
 
 
 def save_search_session(keyword, data, source_json_path=""):

@@ -4,22 +4,15 @@
 小红书博主爬虫模块
 使用本地爬虫获取博主笔记数据
 """
-import subprocess
-
-_original_popen_init = subprocess.Popen.__init__
-
-def _patched_popen_init(self, *args, **kwargs):
-    if kwargs.get('universal_newlines') or kwargs.get('text'):
-        kwargs.setdefault('encoding', 'utf-8')
-    return _original_popen_init(self, *args, **kwargs)
-
-subprocess.Popen.__init__ = _patched_popen_init
-
 import os
 import sys
 import random
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "博主蒸馏" / "scripts" / "utils"))
+from utils.common import patch_subprocess_utf8
+patch_subprocess_utf8()
 
 # 添加爬虫路径（指向共享 Spider_XHS）
 _SPIDER_DIR = str((Path(__file__).parent.parent.parent / '博主蒸馏' / 'spider_xhs').resolve())

@@ -1,6 +1,23 @@
 """通用工具函数"""
 
 import re
+import subprocess
+
+
+def patch_subprocess_utf8():
+    """Monkey-patch subprocess.Popen 强制 UTF-8，防止 execjs 在 GBK 系统上崩溃。
+    安全可重复调用（幂等）。
+    """
+    if getattr(subprocess.Popen, '_utf8_patched', False):
+        return
+    _original = subprocess.Popen.__init__
+    def _patched(self, *args, **kwargs):
+        if kwargs.get('universal_newlines') or kwargs.get('text'):
+            kwargs.setdefault('encoding', 'utf-8')
+            kwargs.setdefault('errors', 'replace')
+        return _original(self, *args, **kwargs)
+    subprocess.Popen.__init__ = _patched
+    subprocess.Popen._utf8_patched = True
 
 
 def parse_count(s):
@@ -39,6 +56,31 @@ PLATFORM_REGISTRY = {
 }
 
 SUPPORTED_PLATFORMS = list(PLATFORM_REGISTRY.keys())
+
+CATEGORY_MAP = {
+    "general": "通用",
+    "food": "美食",
+    "fitness": "健身",
+    "travel": "旅行",
+    "fashion": "时尚",
+    "beauty": "护肤",
+    "digital": "数码",
+    "home": "家居",
+    "parenting": "育儿",
+    "pet": "宠物",
+    "emotion": "情感",
+    "tech": "科技",
+    "art": "艺术",
+    "sport": "运动",
+    "car": "汽车",
+    "education": "教育",
+    "finance": "财经",
+    "game": "游戏",
+    "knowledge": "知识",
+    "comic": "动漫",
+    "music": "音乐",
+    "fun": "搞笑",
+}
 
 
 def get_platform_config(platform: str) -> dict:

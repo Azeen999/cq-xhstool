@@ -12,15 +12,10 @@ import time
 import random
 import argparse
 import re
-import subprocess
 
-_original_popen_init = subprocess.Popen.__init__
-def _patched_popen_init(self, *args, **kwargs):
-    if kwargs.get('universal_newlines') or kwargs.get('text'):
-        kwargs.setdefault('encoding', 'utf-8')
-        kwargs.setdefault('errors', 'replace')
-    return _original_popen_init(self, *args, **kwargs)
-subprocess.Popen.__init__ = _patched_popen_init
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+from utils.common import patch_subprocess_utf8
+patch_subprocess_utf8()
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
@@ -40,31 +35,7 @@ SPIDER_DIR = os.path.abspath(SPIDER_DIR)
 sys.path.insert(0, SPIDER_DIR)
 os.chdir(SPIDER_DIR)
 
-# 频道映射
-CATEGORY_MAP = {
-    "general": "通用",
-    "food": "美食",
-    "fitness": "健身",
-    "travel": "旅行",
-    "fashion": "时尚",
-    "beauty": "护肤",
-    "digital": "数码",
-    "home": "家居",
-    "parenting": "育儿",
-    "pet": "宠物",
-    "emotion": "情感",
-    "tech": "科技",
-    "art": "艺术",
-    "sport": "运动",
-    "car": "汽车",
-    "education": "教育",
-    "finance": "财经",
-    "game": "游戏",
-    "knowledge": "知识",
-    "comic": "动漫",
-    "music": "音乐",
-    "fun": "搞笑",
-}
+from utils.common import CATEGORY_MAP
 
 
 def fetch_hot_feed(category: str, max_notes: int, output_dir: str):

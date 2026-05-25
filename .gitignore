@@ -10,6 +10,9 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+build_portable/
+dist_package/
+dist_temp/
 *.egg
 
 # === 采集数据（含公开笔记内容）===

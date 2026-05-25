@@ -11,15 +11,10 @@ import json
 import time
 import argparse
 import re
-import subprocess
 
-_original_popen_init = subprocess.Popen.__init__
-def _patched_popen_init(self, *args, **kwargs):
-    if kwargs.get('universal_newlines') or kwargs.get('text'):
-        kwargs.setdefault('encoding', 'utf-8')
-        kwargs.setdefault('errors', 'replace')
-    return _original_popen_init(self, *args, **kwargs)
-subprocess.Popen.__init__ = _patched_popen_init
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+from utils.common import patch_subprocess_utf8
+patch_subprocess_utf8()
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
@@ -61,12 +56,12 @@ def search_users(keyword: str, max_users: int, output_dir: str):
     users = []
     for u in user_list:
         try:
-            user_id = u.get("user_id", u.get("userId", ""))
-            nickname = u.get("nickname", u.get("nickName", ""))
-            avatar = u.get("avatar", u.get("avatar_url", ""))
-            desc = u.get("desc", u.get("description", ""))
-            fans = u.get("fans", u.get("fans_count", u.get("follower_count", "0")))
-            notes = u.get("notes", u.get("note_count", u.get("notes_count", "0")))
+            user_id = u.get("id", u.get("user_id", u.get("userId", "")))
+            nickname = u.get("name", u.get("nickname", u.get("nickName", "")))
+            avatar = u.get("image", u.get("avatar", u.get("avatar_url", "")))
+            desc = u.get("sub_title", u.get("desc", u.get("description", "")))
+            fans = u.get("fans", u.get("fans_count", u.get("follower_count", u.get("fans_total", "0"))))
+            notes = u.get("note_count", u.get("notes", u.get("notes_count", "0")))
 
             users.append({
                 "user_id": user_id,

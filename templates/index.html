@@ -272,7 +272,6 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
   <a class="nav-item" data-tab="self-diagnose"><span>自我诊断</span></a>
   <a class="nav-item" data-tab="post-dive"><span>帖子深挖</span></a>
   <a class="nav-item" data-tab="keyword-search"><span>关键词搜索</span></a>
-  <a class="nav-item" data-tab="hot-feed"><span>热门推荐</span></a>
   <a class="nav-item" data-tab="user-search"><span>用户搜索</span></a>
   <div class="cat-label">🤖 AI</div>
   <a class="nav-item" data-tab="rag-qa"><span>粗趣问答</span></a>
@@ -506,52 +505,6 @@ body { font-family: -apple-system, "Segoe UI", "PingFang SC", Roboto, sans-serif
       </div>
     </div>
 
-    <!-- ════ 热门推荐 ════ -->
-    <div class="tab-content" id="tab-hot-feed">
-      <div class="pd-view">
-        <div class="pd-main">
-          <div class="card pd-input-card">
-            <h3 style="margin:0 0 8px">🔥 热门推荐</h3>
-            <p style="margin:0 0 12px;font-size:13px;color:#666">浏览小红书各频道热门笔记</p>
-            <div class="form-row" style="margin-bottom:8px">
-              <select id="hf-category" style="flex:1;padding:6px 10px;border:1px solid #d2d2d7;border-radius:6px;font-size:13px">
-                <option value="general">通用</option>
-                <option value="food">美食</option>
-                <option value="travel">旅行</option>
-                <option value="fashion">时尚</option>
-                <option value="beauty">护肤</option>
-                <option value="digital">数码</option>
-                <option value="home">家居</option>
-                <option value="knowledge">知识</option>
-                <option value="education">教育</option>
-                <option value="finance">财经</option>
-                <option value="game">游戏</option>
-                <option value="fun">搞笑</option>
-              </select>
-              <select id="hf-count" style="width:80px;padding:4px 8px;border:1px solid #d2d2d7;border-radius:6px;font-size:12px">
-                <option value="10">10</option>
-                <option value="20" selected>20</option>
-                <option value="30">30</option>
-              </select>
-              <button class="btn btn-primary" onclick="startHotFeed()">🔥 获取</button>
-            </div>
-          </div>
-          <div class="pd-log-section" id="hf-log-section" style="display:none">
-            <div class="pd-section-header" onclick="toggleLog(this)">
-              ▶ 运行日志 <span style="font-weight:400;font-size:12px">（点击展开/折叠）</span>
-            </div>
-            <div class="log-box" id="log-hf" style="display:none"></div>
-          </div>
-          <div class="ks-results" id="hf-result">
-            <div style="color:#999;font-size:13px;text-align:center;padding:40px">
-              <div style="font-size:36px;margin-bottom:8px">🔥</div>
-              <div>选择频道点击获取，浏览热门笔记</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- ════ 用户搜索 ════ -->
     <div class="tab-content" id="tab-user-search">
       <div class="pd-view">
@@ -736,7 +689,6 @@ document.querySelectorAll('.nav-item').forEach(el => {
     if (el.dataset.tab === 'material-self') loadMaterialSelf();
     if (el.dataset.tab === 'post-dive') loadPostDiveHistory();
     if (el.dataset.tab === 'keyword-search') loadKsHistory();
-    if (el.dataset.tab === 'hot-feed') loadHfCategories();
     if (el.dataset.tab === 'user-search') loadUsHistory();
     if (el.dataset.tab === 'rag-qa') initRagChat();
   });
@@ -2911,120 +2863,7 @@ async function sendRagQuestion() {
 
 loadSelfAccount();
 
-// ══════════════════════════════════════════
-//  热门推荐
-// ══════════════════════════════════════════
 
-let _hfTaskId = null;
-let _hfCurrentResultPath = null;
-
-async function startHotFeed() {
-  const btn = document.querySelector('#tab-hot-feed .btn-primary');
-  const category = document.getElementById('hf-category').value;
-  const maxNotes = document.getElementById('hf-count').value;
-  const resultDiv = document.getElementById('hf-result');
-  const logSection = document.getElementById('hf-log-section');
-  const logBox = document.getElementById('log-hf');
-
-  btn.disabled = true;
-  btn.textContent = '获取中...';
-  resultDiv.innerHTML = '<div style="text-align:center;padding:30px"><div class="spinner"></div><div style="margin-top:12px;color:#666">获取热门推荐中...</div></div>';
-  logSection.style.display = 'block';
-  logBox.style.display = 'block';
-  logBox.textContent = '';
-
-  const r = await fetch('/api/hot-feed/start', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({ category, max_notes: maxNotes }),
-  });
-  const data = await r.json();
-  if (!data.ok) { btn.disabled = false; btn.textContent = '🔥 获取'; alert(data.error); return; }
-
-  _hfTaskId = data.task_id;
-  await hotFeedLogStream(data.task_id, resultDiv, logBox);
-  btn.disabled = false;
-  btn.textContent = '🔥 获取';
-}
-
-async function hotFeedLogStream(taskId, resultDiv, logBox) {
-  const evtSource = new EventSource(`/api/task/${taskId}/stream`);
-  let lines = [];
-
-  evtSource.onmessage = (e) => {
-    const text = JSON.parse(e.data);
-    lines.push(text);
-    logBox.textContent += text + '\n';
-    logBox.scrollTop = logBox.scrollHeight;
-  };
-
-  evtSource.addEventListener('error_event', (e) => {
-    const text = JSON.parse(e.data);
-    lines.push(text);
-    logBox.textContent += text + '\n';
-    logBox.scrollTop = logBox.scrollHeight;
-  });
-
-  evtSource.addEventListener('done', async (e) => {
-    evtSource.close();
-    const payload = JSON.parse(e.data);
-    if (payload.exit_code === 0) {
-      const r = await fetch(`/api/task/${taskId}/status`);
-      const st = await r.json();
-      const resultPath = st.result_files?.hotfeed_result;
-      if (resultPath) {
-        _hfCurrentResultPath = resultPath;
-        loadHotFeedResult(resultPath, resultDiv);
-      } else {
-        resultDiv.innerHTML = '<div style="color:#999;text-align:center;padding:30px">✅ 完成，但未找到结果文件</div>';
-      }
-    } else {
-      resultDiv.innerHTML = '<div style="color:#cc3333;text-align:center;padding:30px">❌ 获取失败，请查看日志</div>';
-    }
-  });
-}
-
-async function loadHotFeedResult(filepath, resultDiv) {
-  const r = await fetch(`/api/hot-feed/read?path=${encodeURIComponent(filepath)}`);
-  const data = await r.json();
-  if (!data.ok) { resultDiv.innerHTML = '<div style="color:#cc3333">加载失败</div>'; return; }
-
-  const results = data.data.results || [];
-  const categoryLabel = data.data.category_label || '';
-
-  let html = `<div style="margin-bottom:12px;font-size:14px;font-weight:600">🔥 ${categoryLabel} · 共 ${results.length} 篇</div>`;
-  html += '<div class="ks-grid">';
-
-  for (const note of results) {
-    const images = note.image_list || [];
-    const imgHtml = images.slice(0, 3).map(u =>
-      `<img src="/api/image-proxy?url=${encodeURIComponent(u)}" loading="lazy" style="width:80px;height:80px;object-fit:cover;border-radius:4px;margin-right:4px">`
-    ).join('');
-
-    const avatarHtml = note.avatar
-      ? `<img src="/api/image-proxy?url=${encodeURIComponent(note.avatar)}" style="width:20px;height:20px;border-radius:50%;vertical-align:middle;margin-right:4px">`
-      : '';
-
-    const tags = Array.isArray(note.tags) ? note.tags.map(t => typeof t === 'string' ? t : (t.name || '')).filter(Boolean).join(', ') : '';
-
-    html += `<div class="ks-card" style="border:1px solid #e8e8ed;border-radius:8px;padding:10px;margin-bottom:8px;background:#fff">
-      ${imgHtml ? `<div style="margin-bottom:6px">${imgHtml}</div>` : ''}
-      <div style="font-size:13px;font-weight:500;margin-bottom:4px">${escapeHtml(note.title || note.desc || '(无标题)')}</div>
-      <div style="font-size:11px;color:#666;margin-bottom:4px">
-        ${avatarHtml}
-        ${note.nickname ? `<a href="${escapeHtml(note.home_url || '#')}" target="_blank" style="color:#007aff;text-decoration:none">${escapeHtml(note.nickname)}</a>` : ''}
-        <span style="float:right">❤️ ${note.liked_count || 0} 💾 ${note.collected_count || 0} 💬 ${note.comment_count || 0}</span>
-      </div>
-      ${tags ? `<div style="font-size:11px;color:#888">#${escapeHtml(tags)}</div>` : ''}
-    </div>`;
-  }
-
-  html += '</div>';
-  resultDiv.innerHTML = html;
-}
-
-async function loadHfCategories() {
-}
 
 // ══════════════════════════════════════════
 //  用户搜索

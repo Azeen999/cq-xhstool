@@ -81,8 +81,8 @@ def _is_stopped(task_id: str) -> bool:
         return ev is not None and ev.is_set()
 
 
-def _run_subprocess(cmd: list, log_queue: queue.Queue, task_id: str | None = None, cwd=None):
-    """在子线程中运行命令，输出逐行写入 log_queue。task_id 不为 None 时自动更新任务状态"""
+def _run_subprocess(cmd: list, log_queue: queue.Queue, task_id: str | None = None, cwd=None, on_done=None):
+    """在子线程中运行命令，输出逐行写入 log_queue。task_id 不为 None 时自动更新任务状态。on_done(task_id, exit_code) 在任务完成后调用"""
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
@@ -91,8 +91,6 @@ def _run_subprocess(cmd: list, log_queue: queue.Queue, task_id: str | None = Non
         if task_id is not None and _is_stopped(task_id):
             log_queue.put("[STOP] 任务已被用户终止，跳过启动\n")
             return
-        # 使用二进制模式 + 手动 decode，避免 Python 3.14 _readerthread
-        # 在 GBK 系统上解码失败导致 pipe 崩溃的问题
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
@@ -120,6 +118,11 @@ def _run_subprocess(cmd: list, log_queue: queue.Queue, task_id: str | None = Non
                 if task_id in _tasks:
                     _tasks[task_id]["done"] = True
                     _tasks[task_id]["exit_code"] = exit_code
+        if on_done is not None:
+            try:
+                on_done(task_id, exit_code)
+            except Exception as e:
+                print(f"[callback] on_done error: {e}")
         log_queue.put(None)
 
 
@@ -433,10 +436,12 @@ def run_deep():
     details_file = str(details_files[0]) if details_files else ""
 
     python = sys.executable
+    deep_out_dir = str(MATERIAL_SELF_DIR) if mode == "B" else str(MATERIAL_BLOGGER_DIR)
+    os.makedirs(deep_out_dir, exist_ok=True)
     cmd = [
         python, str(TOOLS_DIR / "博主蒸馏" / "scripts" / "deep_analyze.py"),
         analysis_file, blogger_name,
-        "-o", str(OUTPUT_DIR),
+        "-o", deep_out_dir,
         "--details", details_file,
         "--mode", mode,
     ]
@@ -544,8 +549,16 @@ def start_post_dive():
 #  素材库 — 博主风格浏览
 # =============================================================
 
-def _scan_bloggers():
-    """扫描所有已蒸馏的博主，返回博主列表"""
+_bloggers_cache = {"data": None, "mtime": 0}
+_BLOGGERS_CACHE_TTL = 10
+
+
+def _scan_bloggers(force=False):
+    """扫描所有已蒸馏的博主，返回博主列表（带 10 秒缓存）"""
+    import time as _time
+    now = _time.time()
+    if not force and _bloggers_cache["data"] is not None and (now - _bloggers_cache["mtime"]) < _BLOGGERS_CACHE_TTL:
+        return _bloggers_cache["data"]
     bloggers = []
     seen = set()
 
@@ -777,6 +790,8 @@ def _scan_bloggers():
 
             bloggers.append(info)
 
+    _bloggers_cache["data"] = bloggers
+    _bloggers_cache["mtime"] = _time.time()
     return bloggers
 
 
@@ -1552,7 +1567,7 @@ def keyword_search_start():
                 except Exception as e:
                     print(f"[DB] 保存搜索记录失败: {e}")
 
-    t = threading.Thread(target=_run_subprocess, args=(cmd, log_queue, task_id), daemon=True)
+    t = threading.Thread(target=_run_subprocess, args=(cmd, log_queue, task_id), kwargs={"on_done": _on_search_done}, daemon=True)
     t.start()
 
     return jsonify({"ok": True, "task_id": task_id})
@@ -1698,76 +1713,7 @@ def keyword_search_export():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
-# =============================================================
-#  热门推荐
-# =============================================================
-
-HOTFEED_OUTPUT_DIR = ROOT / "output" / "热榜"
-HOTFEED_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-
-CATEGORY_MAP = {
-    "general": "通用", "food": "美食", "fitness": "健身", "travel": "旅行",
-    "fashion": "时尚", "beauty": "护肤", "digital": "数码", "home": "家居",
-    "parenting": "育儿", "pet": "宠物", "emotion": "情感", "tech": "科技",
-    "art": "艺术", "sport": "运动", "car": "汽车", "education": "教育",
-    "finance": "财经", "game": "游戏", "knowledge": "知识", "comic": "动漫",
-    "music": "音乐", "fun": "搞笑",
-}
-
-
-@app.route("/api/hot-feed/categories")
-def hot_feed_categories():
-    return jsonify({"ok": True, "categories": CATEGORY_MAP})
-
-
-@app.route("/api/hot-feed/start", methods=["POST"])
-def hot_feed_start():
-    data = request.get_json() or request.form
-    category = (data.get("category") or "general").strip()
-    max_notes = min(int(data.get("max_notes") or 20), 50)
-
-    python = sys.executable
-    script = str(TOOLS_DIR / "博主蒸馏" / "scripts" / "hot_feed.py")
-    cmd = [python, script, "--category", category, "--max-notes", str(max_notes), "--output", str(HOTFEED_OUTPUT_DIR)]
-
-    task_id = _next_id()
-    log_queue = queue.Queue()
-    task = {
-        "id": task_id, "type": "hot_feed", "cmd": cmd,
-        "queue": log_queue, "done": False, "exit_code": None,
-        "result_files": {},
-    }
-    with _task_lock:
-        _tasks[task_id] = task
-
-    def _on_done(task_id, exit_code):
-        if exit_code == 0:
-            files = sorted(HOTFEED_OUTPUT_DIR.glob("hotfeed_*.json"),
-                           key=lambda f: f.stat().st_mtime, reverse=True)
-            if files:
-                with _task_lock:
-                    _tasks[task_id]["result_files"]["hotfeed_result"] = str(files[0])
-
-    t = threading.Thread(target=_run_subprocess, args=(cmd, log_queue, task_id), daemon=True)
-    t.start()
-    return jsonify({"ok": True, "task_id": task_id})
-
-
-@app.route("/api/hot-feed/read")
-def hot_feed_read():
-    filepath = request.args.get("path", "")
-    if not filepath:
-        return jsonify({"ok": False, "error": "no path"})
-    full_path = Path(filepath).resolve()
-    if not str(full_path).startswith(str(ROOT.resolve())):
-        return jsonify({"ok": False, "error": "access denied"})
-    if not full_path.is_file():
-        return jsonify({"ok": False, "error": "file not found"})
-    try:
-        content = full_path.read_text(encoding="utf-8")
-        return jsonify({"ok": True, "data": json.loads(content)})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)})
+# (热门推荐功能已移除)
 
 
 # =============================================================

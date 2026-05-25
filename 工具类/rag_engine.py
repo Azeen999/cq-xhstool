@@ -33,20 +33,20 @@ def _tokenize(text: str) -> list[str]:
             "这", "那", "上", "给", "当", "跟", "对", "使", "比", "从",
             "所", "然", "后", "过", "天", "下", "可", "出", "只", "又", "再",
             "把", "无", "被", "中", "更", "吗", "同", "哪", "它", "哦",
-            "的", "了", "是", "和", "就", "都", "而", "及", "与", "着",
-            "或", "一个", "没有", "我们", "你们", "他们", "这个", "那个",
-            "这些", "那些", "什么", "怎么", "如何", "为什么", "因为", "所以",
-            "但是", "可是", "如果", "可以", "能", "会", "要", "应该", "觉得",
-            "认为", "知道", "在", "有", "不", "也", "很", "到", "说", "去",
-            "看", "自己", "这", "那", "上", "给", "当", "跟", "对", "使",
-            "比", "从", "所", "然", "后", "过", "天", "下", "可", "出",
-            "只", "又", "再", "把", "无", "被", "中", "更", "吗", "同",
-            "哪", "它", "哦", "哈", "啊", "嗯", "呢", "吧"}
+            "哈", "啊", "嗯", "呢", "吧"}
     return [w.strip() for w in words if len(w.strip()) >= 2 and w.strip() not in stop]
 
 
 class RAGEngine:
     """粗趣知识库问答引擎"""
+
+    _DEFAULT_SYSTEM_PROMPT = """你是一个粗趣品牌知识助手。粗趣是深圳本地社交活动平台，提供桌游、派对、户外等线下社交活动。
+
+请根据以下知识库内容回答用户的问题。要求：
+1. 只基于知识库内容回答，不要编造信息
+2. 如果知识库中找不到相关信息，请说"知识库中没有相关信息"
+3. 回答简洁、口语化
+4. 适当引用具体的数据或例子"""
 
     def __init__(self):
         self.chunks: list[dict] = []
@@ -149,16 +149,9 @@ class RAGEngine:
 
         context = "\n\n---\n\n".join(context_parts)
 
-        system_prompt = """你是一个粗趣品牌知识助手。粗趣是深圳本地社交活动平台，提供桌游、派对、户外等线下社交活动。
-
-请根据以下知识库内容回答用户的问题。要求：
-1. 只基于知识库内容回答，不要编造信息
-2. 如果知识库中找不到相关信息，请说"知识库中没有相关信息"
-3. 回答简洁、口语化
-4. 适当引用具体的数据或例子"""
         user_prompt = f"知识库内容：\n{context}\n\n用户问题：{question}"
 
-        result = self._call_llm(system_prompt, user_prompt)
+        result = self._call_llm(self._DEFAULT_SYSTEM_PROMPT, user_prompt)
 
         if result.get("ok"):
             return {
@@ -301,7 +294,7 @@ class RAGEngine:
 
     # ── LLM 调用 ──
 
-    def _call_llm(self, question: str, context: str) -> dict:
+    def _call_llm(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> dict:
         import requests as req
         spider_dir = ROOT_DIR / "工具类" / "博主蒸馏" / "spider_xhs"
         env_path = spider_dir / ".env"
@@ -317,13 +310,6 @@ class RAGEngine:
                 base_url = m.group(1).strip().strip("'\"").strip()
         if not api_key:
             return {"ok": False, "error": "API Key 未配置"}
-        system_prompt = """你是一个粗趣品牌知识助手。粗趣是深圳本地社交活动平台，提供桌游、派对、户外等线下社交活动。
-
-请根据以下知识库内容回答用户的问题。要求：
-1. 只基于知识库内容回答，不要编造信息
-2. 如果知识库中找不到相关信息，请说"知识库中没有相关信息"
-3. 回答简洁、口语化
-4. 适当引用具体的数据或例子"""
         try:
             resp = req.post(
                 f"{base_url}/chat/completions",
@@ -332,9 +318,9 @@ class RAGEngine:
                     "model": "deepseek-v4-flash",
                     "messages": [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": f"知识库内容：\n{context}\n\n用户问题：{question}"},
+                        {"role": "user", "content": user_prompt},
                     ],
-                    "temperature": 0.3,
+                    "temperature": temperature,
                     "max_tokens": 2000,
                 },
                 timeout=60,

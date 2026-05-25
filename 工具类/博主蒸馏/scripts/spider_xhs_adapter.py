@@ -27,20 +27,13 @@ import random
 import argparse
 import re
 
-# Monkey-patch subprocess.Popen 强制 UTF-8 编码，防止 execjs/Node.js 在 GBK 系统上崩溃
-import subprocess
-_original_popen_init = subprocess.Popen.__init__
-def _patched_popen_init(self, *args, **kwargs):
-    if kwargs.get('universal_newlines') or kwargs.get('text'):
-        kwargs.setdefault('encoding', 'utf-8')
-        kwargs.setdefault('errors', 'replace')
-    return _original_popen_init(self, *args, **kwargs)
-subprocess.Popen.__init__ = _patched_popen_init
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils"))
+from utils.common import patch_subprocess_utf8
+patch_subprocess_utf8()
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 sys.stderr.reconfigure(encoding='utf-8', errors='replace')
 
-# 强制子进程 UTF-8，execjs 内部 Node.js 子进程使用 UTF-8 管道
 os.environ["PYTHONUTF8"] = "1"
 os.environ["PYTHONIOENCODING"] = "utf-8"
 
